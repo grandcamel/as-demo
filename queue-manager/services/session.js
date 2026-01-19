@@ -69,9 +69,11 @@ function createSessionEnvFile(sessionId) {
   // Get all environment variables from enabled platforms
   const envVars = config.getAllEnvVars();
 
-  return coreCreateEnvFile(sessionId, envVars, {
+  return coreCreateEnvFile({
+    sessionId: sessionId,
     containerPath: config.SESSION_ENV_CONTAINER_PATH,
-    hostPath: config.SESSION_ENV_HOST_PATH
+    hostPath: config.SESSION_ENV_HOST_PATH,
+    credentials: envVars
   });
 }
 
