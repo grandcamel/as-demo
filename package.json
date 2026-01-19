@@ -1,0 +1,22 @@
+{
+  "name": "as-demo",
+  "version": "1.0.0",
+  "description": "Combined Assistant Skills Demo Platform (Confluence + JIRA + Splunk)",
+  "private": true,
+  "scripts": {
+    "dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+    "dev:full": "docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile full up -d",
+    "prod": "docker compose up -d",
+    "prod:full": "docker compose --profile full up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "lint": "npm run lint --prefix queue-manager",
+    "lint:fix": "npm run lint:fix --prefix queue-manager"
+  },
+  "workspaces": [
+    "queue-manager"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

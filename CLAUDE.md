@@ -1,0 +1,386 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code when working with the as-demo project.
+
+## Project Overview
+
+**AS-Demo** is a unified demo platform combining three Assistant Skills demos (Confluence, JIRA, Splunk) into a single deployment. The key value is **cross-platform scenarios** that demonstrate real-world automation workflows like incident response, change management, and SRE on-call operations.
+
+### Architecture
+
+```
+as-demo/
+├── .claude/                    # Claude Code plugin
+│   ├── plugin.json             # Plugin manifest
+│   └── agents/
+│       └── code-reviewer.md    # Security & code review agent
+├── .github/workflows/
+│   └── ci.yml                  # GitHub Actions CI/CD
+├── docker-compose.yml          # Production orchestration (profiles for Splunk)
+├── docker-compose.dev.yml      # Development overrides
+├── Makefile                    # Dev/deploy/test targets
+├── queue-manager/              # Node.js WebSocket server (multi-platform)
+│   ├── Dockerfile              # Multi-stage build (dev/production)
+│   ├── lib/                    # Embedded shared library
+│   │   ├── index.js            # @demo-platform/queue-manager-core
+│   │   ├── session.js
+│   │   ├── rate-limit.js
+│   │   ├── env-file.js
+│   │   └── metrics.js
+│   ├── config/
+│   │   ├── index.js            # Multi-platform config loader
+│   │   ├── platforms/          # Platform-specific configs
+│   │   │   ├── confluence.js
+│   │   │   ├── jira.js
+│   │   │   └── splunk.js
+│   │   └── cross-platform.js   # Cross-platform scenarios
+│   ├── services/               # Session, queue, invite, state
+│   └── handlers/               # WebSocket
+├── demo-container/             # Unified container with ALL plugins
+│   ├── Dockerfile              # Multi-plugin installation
+│   ├── entrypoint.sh           # Platform-aware menu
+│   ├── autoplay.sh             # Automated demo playback
+│   ├── skill-test.py           # Skill testing framework
+│   └── scenarios/
+│       ├── cross-platform/     # Cross-platform workflows
+│       ├── confluence/         # Confluence scenarios
+│       ├── jira/               # JIRA scenarios
+│       └── splunk/             # Splunk scenarios
+├── landing-page/               # Platform selector + scenario browser
+├── nginx/                      # Reverse proxy
+│   ├── nginx.conf              # Main config with security headers
+│   ├── demo.conf               # Production config
+│   └── dev.conf                # Development config
+├── splunk/                     # Splunk-specific services
+│   ├── apps/demo_app/          # Splunk app
+│   ├── log-generator/          # Sample log generator
+│   └── seed-data/              # Demo data
+├── scripts/                    # Seed/cleanup scripts
+│   ├── confluence_base.py      # Confluence API client
+│   ├── seed_confluence_sandbox.py
+│   ├── cleanup_confluence_sandbox.py
+│   ├── jira_base.py            # JIRA API client
+│   ├── seed_jira_sandbox.py
+│   ├── cleanup_jira_sandbox.py
+│   └── otel_setup.py           # OpenTelemetry setup
+└── observability/              # LGTM stack
+    ├── dashboards/
+    │   ├── demo-home.json
+    │   ├── queue-operations.json
+    │   ├── session-analytics.json
+    │   ├── skill-test-results.json
+    │   ├── nginx-access-logs.json
+    │   └── system-overview.json
+    ├── grafana-dashboards.yaml
+    └── promtail-config.yaml
+```
+
+### Key Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| nginx | 80, 443 (8080 in dev) | Reverse proxy, SSL, static content |
+| queue-manager | 3000 | WebSocket, session management, invites |
+| redis | 6379 | Session state, queue, invite tokens |
+| lgtm | 3001 (Grafana) | Grafana, Loki, Tempo (LGTM stack) |
+| splunk | 8000, 8089 | Splunk Enterprise (profile: full) |
+
+## Development Commands
+
+### Quick Start
+
+```bash
+# Start local development (Atlassian only)
+make dev
+
+# Start with Splunk (requires 4GB+ memory)
+make dev-full
+
+# Access at http://localhost:8080
+# Grafana at http://localhost:3001
+
+# Stop environment
+make down
+```
+
+### Testing
+
+```bash
+# Test individual platforms
+make test-confluence SCENARIO=page
+make test-jira SCENARIO=issue
+make test-splunk SCENARIO=sre
+
+# Test cross-platform scenarios
+make test-cross SCENARIO=incident-response
+
+# Run all tests
+make test-all
+```
+
+### Code Quality
+
+```bash
+# Run linters
+make lint
+
+# Auto-fix issues
+make lint-fix
+```
+
+### Code Review
+
+Use the `code-reviewer` agent for security and quality review:
+
+```
+Run a code-reviewer subagent on the as-demo project
+```
+
+This identifies security vulnerabilities, logic errors, and code quality issues with confidence-based filtering.
+
+### Sandbox Management
+
+```bash
+# Seed demo data
+make seed-confluence
+make seed-jira
+
+# Reset sandboxes
+make reset-confluence
+make reset-jira
+```
+
+## Cross-Platform Scenarios
+
+| Scenario | Flow | File |
+|----------|------|------|
+| Incident Response | Splunk → Confluence → JIRA | cross-platform/incident-response.prompts |
+| SRE On-Call | Splunk alerts → KB → Tasks | cross-platform/sre-oncall.prompts |
+| Change Management | JIRA → Confluence → Splunk | cross-platform/change-management.prompts |
+| Knowledge Sync | JIRA → Confluence | cross-platform/knowledge-sync.prompts |
+
+## Configuration
+
+### Environment Variables (`secrets/.env`)
+
+```bash
+# Enabled platforms (comma-separated)
+ENABLED_PLATFORMS=confluence,jira,splunk
+
+# Session management
+SESSION_TIMEOUT_MINUTES=60
+MAX_QUEUE_SIZE=10
+SESSION_SECRET=your-secure-random-string
+
+# Claude Authentication
+CLAUDE_CODE_OAUTH_TOKEN=...
+
+# Confluence
+CONFLUENCE_API_TOKEN=your-token
+CONFLUENCE_EMAIL=your-email@example.com
+CONFLUENCE_SITE_URL=https://your-site.atlassian.net
+DEMO_SPACE_KEY=CDEMO
+
+# JIRA
+JIRA_API_TOKEN=your-token
+JIRA_EMAIL=your-email@example.com
+JIRA_SITE_URL=https://your-site.atlassian.net
+DEMO_PROJECT_KEY=DEMO
+
+# Splunk
+SPLUNK_URL=https://splunk:8089
+SPLUNK_USERNAME=admin
+SPLUNK_PASSWORD=DemoPass123!
+SPLUNK_HEC_TOKEN=demo-hec-token
+```
+
+## Deployment Modes
+
+| Mode | Command | Services |
+|------|---------|----------|
+| Atlassian Only | `docker compose up -d` | nginx, queue-manager, redis, lgtm |
+| Full (with Splunk) | `docker compose --profile full up -d` | + splunk, log-generator |
+| Development | `make dev` | Hot reload, debug logging |
+
+## Multi-Platform Configuration
+
+The queue-manager uses a modular config system with validation:
+
+```javascript
+// config/index.js
+const VALID_PLATFORMS = ['confluence', 'jira', 'splunk'];
+const ENABLED_PLATFORMS = (process.env.ENABLED_PLATFORMS || 'confluence,jira,splunk')
+  .split(',').map(p => p.trim().toLowerCase())
+  .filter(p => VALID_PLATFORMS.includes(p));
+
+// Validates at least one platform is enabled
+if (ENABLED_PLATFORMS.length === 0) {
+  console.error('FATAL: No valid platforms enabled');
+  process.exit(1);
+}
+```
+
+Cross-platform scenarios validate their platform requirements at load time:
+
+```javascript
+// config/cross-platform.js
+validateScenarios() {
+  for (const [key, scenario] of Object.entries(this.SCENARIO_NAMES)) {
+    const invalid = scenario.requiredPlatforms.filter(p => !VALID_PLATFORMS.includes(p));
+    if (invalid.length > 0) {
+      throw new Error(`Scenario '${key}' has invalid platform requirements`);
+    }
+  }
+}
+```
+
+## Security Considerations
+
+### Session Management
+- `SESSION_SECRET` must be set in production
+- Session tokens use HMAC-SHA256 signatures
+- Credentials passed via `--env-file` (not visible in `ps aux`)
+- Env file cleanup prevents double-cleanup race condition
+
+### WebSocket Security
+- Origin header required in production (prevents CSRF bypass)
+- Origin validation against `ALLOWED_ORIGINS` whitelist
+- Rate limiting: 10 connections per IP per minute
+
+### Container Security
+- Memory limit: 2GB, CPU limit: 2 cores, PID limit: 256
+- Capabilities dropped except CHOWN, SETUID, SETGID, DAC_OVERRIDE
+- AppArmor and Seccomp profiles enabled (`docker-default`)
+- Read-only root filesystem with tmpfs for /tmp and /home
+
+### Input Validation
+- Path traversal protection using `path.relative()` (cross-platform safe)
+- Invite tokens validated via regex: `[A-Za-z0-9_-]{4,64}`
+- HTML template substitution uses `escapeHtml()` to prevent XSS
+- Client-side innerHTML sanitized with `escapeHtml()`
+
+### Rate Limiting
+- WebSocket: 10 connections per IP per minute
+- Invite validation: 10 failed attempts per IP per hour
+- Atomic reconnection lock prevents TOCTOU race condition
+
+### HTTP Security Headers
+- X-Frame-Options: SAMEORIGIN
+- X-Content-Type-Options: nosniff
+- X-XSS-Protection: 1; mode=block
+- HSTS: Ready to enable when SSL configured
+
+## Shared Library
+
+The shared library `@demo-platform/queue-manager-core` is embedded in `queue-manager/lib/`:
+
+```javascript
+const {
+  generateSessionToken,
+  createSessionEnvFile,
+  createConnectionRateLimiter,
+  createInviteRateLimiter,
+  createMetrics
+} = require('@demo-platform/queue-manager-core');
+```
+
+This avoids runtime dependency on the external `demo-platform-shared` repository.
+
+## CI/CD Pipeline
+
+GitHub Actions workflow (`.github/workflows/ci.yml`) includes:
+
+| Job | Description |
+|-----|-------------|
+| lint | ESLint for JS, Ruff for Python |
+| nodejs-tests | Config load verification, unit tests |
+| docker-build | Build demo-container with caching |
+| validate-compose | Syntax check docker-compose files |
+| security-scan | npm audit, Bandit for Python |
+
+## Grafana Dashboards
+
+| Dashboard | Purpose |
+|-----------|---------|
+| demo-home | Overview: sessions, queue size, status |
+| queue-operations | Queue metrics, wait times |
+| session-analytics | Session duration, user behavior |
+| skill-test-results | Test pass/fail metrics |
+| nginx-access-logs | Request logs, response codes |
+| system-overview | CPU, memory, container health |
+
+## Related Projects
+
+| Project | Purpose |
+|---------|---------|
+| confluence-demo | Standalone Confluence demo |
+| jira-demo | Standalone JIRA demo |
+| splunk-demo | Standalone Splunk demo |
+| demo-platform-shared | Source of shared queue-manager-core library |
+
+## Troubleshooting
+
+### Container fails to start
+```bash
+docker info  # Check Docker is running
+lsof -i :3000 -i :8080  # Check port conflicts
+make logs  # View logs
+```
+
+### Queue-manager module not found
+The shared library must be embedded in `queue-manager/lib/`. If missing:
+```bash
+# Copy from demo-platform-shared
+cp -r ../demo-platform-shared/packages/queue-manager-core/lib/* queue-manager/lib/
+```
+
+### Nginx upstream error
+If you see "upstream may not have port" errors, ensure `nginx/dev.conf` has separate upstream blocks for each port:
+```nginx
+upstream queue-manager { server queue-manager:3000; }
+upstream terminal { server queue-manager:7681; }
+```
+
+### Plugin installation fails
+```bash
+# Clear plugin cache and reinstall
+rm -rf ~/.claude/plugins
+# Plugins are reinstalled on container start
+```
+
+### Splunk resource issues
+```bash
+# Splunk requires 4GB+ memory
+# Run Atlassian-only mode if resources are limited:
+make dev  # Without --profile full
+```
+
+### Health endpoint shows missing platforms
+The health endpoint shows `enabled_platforms` (from ENABLED_PLATFORMS env) vs `configured_platforms` (platforms with valid credentials). If a platform is enabled but not configured, set its environment variables.
+
+## Adding New Cross-Platform Scenarios
+
+1. Create scenario files:
+   - `demo-container/scenarios/cross-platform/<name>.md` (documentation)
+   - `demo-container/scenarios/cross-platform/<name>.prompts` (test prompts)
+
+2. Add to `queue-manager/config/cross-platform.js`:
+```javascript
+SCENARIO_NAMES: {
+  '<name>': {
+    file: 'cross-platform/<name>.md',
+    title: 'Scenario Title',
+    icon: '🔧',
+    description: 'Platform A → Platform B → Platform C',
+    requiredPlatforms: ['confluence', 'jira', 'splunk']
+  }
+}
+```
+
+3. Update landing page if needed in `landing-page/index.html`
+
+4. Add test target to Makefile:
+```makefile
+test-<name>:
+    $(MAKE) test-cross SCENARIO=<name>
+```

@@ -1,0 +1,13 @@
+# Additional location blocks for AS-Demo
+# This file is included by demo.conf
+
+# Health check (public)
+location /health {
+    proxy_pass http://queue-manager/api/health;
+}
+
+# Robots.txt
+location /robots.txt {
+    return 200 "User-agent: *\nDisallow: /api/\nDisallow: /terminal\nDisallow: /grafana/\n";
+    add_header Content-Type text/plain;
+}

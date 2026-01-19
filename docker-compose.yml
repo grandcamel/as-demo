@@ -1,0 +1,302 @@
+version: '3.8'
+
+# =============================================================================
+# AS-Demo: Combined Assistant Skills Demo Platform
+# =============================================================================
+# Supports Confluence, JIRA, and Splunk Assistant Skills.
+#
+# Deployment modes:
+#   - Atlassian only: docker compose up -d
+#   - Full (with Splunk): docker compose --profile full up -d
+# =============================================================================
+
+# Shared logging configurations
+x-logging-standard: &logging-standard
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-logging-small: &logging-small
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+# Shared health check configurations
+x-healthcheck-http: &healthcheck-http
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+
+x-healthcheck-fast: &healthcheck-fast
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 5s
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # CORE SERVICES (always running)
+  # ─────────────────────────────────────────────────────────────
+
+  nginx:
+    image: nginx:alpine
+    container_name: as-demo-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/demo.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/locations.include:/etc/nginx/conf.d/locations.include:ro
+      - ./landing-page:/var/www/html:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - nginx-logs:/var/log/nginx
+    command: >
+      sh -c "rm -f /var/log/nginx/access.log /var/log/nginx/error.log &&
+             touch /var/log/nginx/access.log /var/log/nginx/error.log &&
+             nginx -g 'daemon off;'"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
+      <<: *healthcheck-http
+    depends_on:
+      queue-manager:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-standard
+
+  queue-manager:
+    build: ./queue-manager
+    container_name: as-demo-queue
+    environment:
+      # Core settings
+      - REDIS_URL=redis://redis:6379
+      - SESSION_TIMEOUT_MINUTES=${SESSION_TIMEOUT_MINUTES:-60}
+      - MAX_QUEUE_SIZE=${MAX_QUEUE_SIZE:-10}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
+      - SESSION_ENV_HOST_PATH=${PWD}/session-env
+
+      # Enabled platforms (comma-separated)
+      - ENABLED_PLATFORMS=${ENABLED_PLATFORMS:-confluence,jira,splunk}
+
+      # Confluence credentials
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
+      - CONFLUENCE_EMAIL=${CONFLUENCE_EMAIL}
+      - CONFLUENCE_SITE_URL=${CONFLUENCE_SITE_URL}
+      - DEMO_SPACE_KEY=${DEMO_SPACE_KEY:-CDEMO}
+
+      # JIRA credentials
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN}
+      - JIRA_EMAIL=${JIRA_EMAIL}
+      - JIRA_SITE_URL=${JIRA_SITE_URL}
+      - DEMO_PROJECT_KEY=${DEMO_PROJECT_KEY:-DEMO}
+
+      # Splunk credentials
+      - SPLUNK_URL=${SPLUNK_URL:-https://splunk:8089}
+      - SPLUNK_WEB_URL=${SPLUNK_WEB_URL:-http://splunk:8000}
+      - SPLUNK_USERNAME=${SPLUNK_USERNAME:-admin}
+      - SPLUNK_PASSWORD=${SPLUNK_PASSWORD}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN}
+
+      # Claude authentication
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # Observability
+      - OTEL_SERVICE_NAME=as-demo-queue-manager
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+    volumes:
+      # SECURITY: Docker socket is required to spawn demo containers.
+      # Mitigations: memory/CPU/PID limits, dropped capabilities, no-new-privileges
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./secrets:/secrets:ro
+      - ./session-env:/run/session-env
+      - ./demo-container:/opt/demo-container:ro
+      - ./scripts:/opt/scripts:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      <<: *healthcheck-http
+    depends_on:
+      redis:
+        condition: service_healthy
+      lgtm:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-standard
+
+  redis:
+    image: redis:alpine
+    container_name: as-demo-redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *healthcheck-fast
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-small
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: as-demo-lgtm
+    environment:
+      - GF_SERVER_ROOT_URL=http://localhost:8080/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER
+      - GF_AUTH_PROXY_HEADER_PROPERTY=username
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PLUGINS_ENABLE_ALPHA=false
+      - GF_PLUGINS_DISABLE_PLUGINS=grafana-exploretraces-app,grafana-metricsdrilldown-app,grafana-pyroscope-app
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/demo-home.json
+    volumes:
+      - ./observability/grafana-dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/as-demo.yaml:ro
+      - ./observability/dashboards:/var/lib/grafana/dashboards:ro
+      - lgtm-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/ready"]
+      <<: *healthcheck-http
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-standard
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: as-demo-redis-exporter
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9121/metrics"]
+      <<: *healthcheck-fast
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-small
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: as-demo-promtail
+    volumes:
+      - ./observability/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - nginx-logs:/var/log/nginx:ro
+    command: -config.file=/etc/promtail/config.yml
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9080/ready"]
+      <<: *healthcheck-fast
+    depends_on:
+      lgtm:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-small
+
+  # ─────────────────────────────────────────────────────────────
+  # SPLUNK SERVICES (profile: "splunk" or "full")
+  # ─────────────────────────────────────────────────────────────
+
+  splunk:
+    image: splunk/splunk:latest
+    hostname: splunk
+    container_name: as-demo-splunk
+    profiles: ["splunk", "full"]
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:-DemoPass123!}
+      SPLUNK_LICENSE_URI: Free
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:-demo-hec-token-12345}
+    ports:
+      - "8000:8000"   # Web UI
+    volumes:
+      - splunk-var:/opt/splunk/var
+      - splunk-etc:/opt/splunk/etc
+      - ./splunk/apps/demo_app:/opt/splunk/etc/apps/demo_app
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:8000/en-US/account/login']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    networks:
+      - demo-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    logging: *logging-standard
+
+  log-generator:
+    build:
+      context: ./splunk
+      dockerfile: log-generator/Dockerfile
+    container_name: as-demo-generator
+    profiles: ["splunk", "full"]
+    depends_on:
+      splunk:
+        condition: service_healthy
+    environment:
+      SPLUNK_HEC_URL: https://splunk:8088
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:-demo-hec-token-12345}
+      GENERATION_RATE: ${GENERATION_RATE:-medium}
+      PERSONAS: devops,sre,support,management
+      INJECT_ANOMALIES: "true"
+    restart: unless-stopped
+    networks:
+      - demo-network
+    logging: *logging-small
+
+  seed-loader:
+    build:
+      context: ./splunk
+      dockerfile: seed-data/Dockerfile
+    container_name: as-demo-seeder
+    profiles: ["splunk", "full"]
+    depends_on:
+      splunk:
+        condition: service_healthy
+    environment:
+      SPLUNK_URL: https://splunk:8089
+      SPLUNK_HEC_URL: https://splunk:8088
+      SPLUNK_USERNAME: admin
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:-DemoPass123!}
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:-demo-hec-token-12345}
+      SEED_DAYS: 7
+      EVENT_COUNT: 1000000
+    volumes:
+      - ./splunk/seed-data/data:/data:ro
+      - seed-status:/status
+    networks:
+      - demo-network
+    logging: *logging-small
+
+networks:
+  demo-network:
+    external: true
+    name: as-demo-network
+
+volumes:
+  redis-data:
+  lgtm-data:
+  nginx-logs:
+  splunk-var:
+  splunk-etc:
+  seed-status:

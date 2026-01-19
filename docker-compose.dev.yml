@@ -1,0 +1,45 @@
+version: '3.8'
+
+# =============================================================================
+# AS-Demo: Development Overrides
+# =============================================================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# =============================================================================
+
+services:
+  nginx:
+    ports:
+      - "8080:80"    # Development port
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+
+  queue-manager:
+    build:
+      context: ./queue-manager
+      target: dev
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
+    volumes:
+      - ./queue-manager:/app
+      - queue-manager-node-modules:/app/node_modules
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["node", "--watch", "--require", "./instrumentation.js", "server.js"]
+
+  lgtm:
+    ports:
+      - "3001:3000"  # Grafana UI for direct access
+
+  splunk:
+    profiles: ["splunk", "full"]
+    ports:
+      - "8000:8000"  # Splunk Web UI
+      - "8089:8089"  # Splunk REST API
+
+networks:
+  demo-network:
+    external: false
+    name: as-demo-network
+
+volumes:
+  queue-manager-node-modules:

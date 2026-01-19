@@ -1,0 +1,22 @@
+
+  AS-Demo: Combined Assistant Skills Demo
+  ──────────────────────────────────────────────────────────────
+
+  Platforms:  Confluence + JIRA + Splunk
+  Session:    1 hour
+
+  Cross-Platform Scenarios:
+
+    "There's a spike in 500 errors. Create an incident ticket."
+    "Find the runbook for payment service issues and create a JIRA bug."
+    "What alerts fired today? Check the KB for known issues."
+    "Create release notes from resolved JIRA issues this sprint."
+
+  Single-Platform Examples:
+
+    Confluence: "Show me all pages in space CDEMO"
+    JIRA:       "List open bugs assigned to me"
+    Splunk:     "Search for errors in the last 15 minutes"
+
+  ──────────────────────────────────────────────────────────────
+

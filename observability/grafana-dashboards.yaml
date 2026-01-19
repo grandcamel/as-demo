@@ -1,0 +1,15 @@
+# Grafana Dashboard Provisioning for AS-Demo
+
+apiVersion: 1
+
+providers:
+  - name: 'AS-Demo Dashboards'
+    orgId: 1
+    folder: 'AS-Demo'
+    folderUid: 'as-demo'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

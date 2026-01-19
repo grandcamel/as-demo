@@ -1,0 +1,2 @@
+# Additional dependencies beyond shared package
+# (shared package provides: requests, faker)

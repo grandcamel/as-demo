@@ -1,0 +1,8 @@
+{
+  "name": "as-demo",
+  "version": "1.0.0",
+  "description": "Combined Assistant Skills Demo Platform - agents and commands for development",
+  "agents": [
+    "agents/*.md"
+  ]
+}

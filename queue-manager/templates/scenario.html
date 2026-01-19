@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ICON}} {{TITLE}} - AS-Demo</title>
+  <link rel="stylesheet" href="/static/scenario.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <span class="header-title">{{ICON}} {{TITLE}}</span>
+      <span class="platform-badge">{{PLATFORM}}</span>
+      <nav class="nav-links">
+        <div class="nav-group">
+          <span class="nav-label">Cross-Platform:</span>
+          <a href="/scenarios/incident-response">🚨 Incident</a>
+          <a href="/scenarios/sre-oncall">📟 SRE</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-label">Confluence:</span>
+          <a href="/scenarios/page">📝 Pages</a>
+          <a href="/scenarios/search">🔍 Search</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-label">JIRA:</span>
+          <a href="/scenarios/issue">📋 Issues</a>
+          <a href="/scenarios/agile">🏃 Agile</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-label">Splunk:</span>
+          <a href="/scenarios/sre">🚨 SRE</a>
+          <a href="/scenarios/devops">🔧 DevOps</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+  <main>
+    {{CONTENT}}
+  </main>
+  <script>
+    document.querySelectorAll('pre').forEach(pre => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper';
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'Copy';
+      wrapper.appendChild(btn);
+      btn.addEventListener('click', async () => {
+        const code = pre.querySelector('code');
+        const text = code ? code.textContent : pre.textContent;
+        try {
+          await navigator.clipboard.writeText(text.trim());
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+        } catch (err) {
+          btn.textContent = 'Failed';
+          setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

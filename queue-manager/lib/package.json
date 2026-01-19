@@ -1,0 +1,24 @@
+{
+  "name": "@demo-platform/queue-manager-core",
+  "version": "1.0.0",
+  "description": "Shared core utilities for demo platform queue managers",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./session": "./session.js",
+    "./rate-limit": "./rate-limit.js",
+    "./env-file": "./env-file.js",
+    "./metrics": "./metrics.js"
+  },
+  "dependencies": {
+    "uuid": "^9.0.1"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    }
+  }
+}
