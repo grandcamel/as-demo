@@ -72,7 +72,7 @@ jobs:
       - name: Run tests
         run: |
           cd queue-manager
-          npm test || echo "No tests configured yet"
+          npm test
 
   docker-build:
     name: Docker Build
