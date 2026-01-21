@@ -148,8 +148,8 @@ trap cleanup EXIT
 echo -e "${CYAN}Installing Assistant Skills CLIs...${NC}"
 
 if [[ "$ENABLED_PLATFORMS" == *"confluence"* ]]; then
-    if pip install --quiet --no-cache-dir confluence-assistant-skills 2>/dev/null; then
-        CLI_VERSION=$(pip show confluence-assistant-skills 2>/dev/null | grep Version | cut -d' ' -f2)
+    if pip install --quiet --no-cache-dir confluence-as 2>/dev/null; then
+        CLI_VERSION=$(pip show confluence-as 2>/dev/null | grep Version | cut -d' ' -f2)
         echo -e "  ${GREEN}✓${NC} confluence CLI v${CLI_VERSION}"
     else
         echo -e "  ${YELLOW}⚠${NC} Confluence CLI failed"
@@ -157,8 +157,8 @@ if [[ "$ENABLED_PLATFORMS" == *"confluence"* ]]; then
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"jira"* ]]; then
-    if pip install --quiet --no-cache-dir jira-assistant-skills 2>/dev/null; then
-        CLI_VERSION=$(pip show jira-assistant-skills 2>/dev/null | grep Version | cut -d' ' -f2)
+    if pip install --quiet --no-cache-dir jira-as 2>/dev/null; then
+        CLI_VERSION=$(pip show jira-as 2>/dev/null | grep Version | cut -d' ' -f2)
         echo -e "  ${GREEN}✓${NC} jira CLI v${CLI_VERSION}"
     else
         echo -e "  ${YELLOW}⚠${NC} JIRA CLI failed"
@@ -166,8 +166,8 @@ if [[ "$ENABLED_PLATFORMS" == *"jira"* ]]; then
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"splunk"* ]]; then
-    if pip install --quiet --no-cache-dir splunk-assistant-skills-lib 2>/dev/null; then
-        CLI_VERSION=$(pip show splunk-assistant-skills-lib 2>/dev/null | grep Version | cut -d' ' -f2)
+    if pip install --quiet --no-cache-dir splunk-as 2>/dev/null; then
+        CLI_VERSION=$(pip show splunk-as 2>/dev/null | grep Version | cut -d' ' -f2)
         echo -e "  ${GREEN}✓${NC} splunk CLI v${CLI_VERSION}"
     else
         echo -e "  ${YELLOW}⚠${NC} Splunk CLI failed"

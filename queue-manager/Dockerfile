@@ -23,8 +23,8 @@ RUN curl -fsSL -o /usr/local/bin/ttyd \
 
 # Install Python dependencies for all platform cleanup scripts
 RUN pip3 install --break-system-packages --no-cache-dir \
-    confluence-assistant-skills-lib>=0.1.0 \
-    jira-assistant-skills>=0.1.0 \
+    confluence-as>=0.1.0 \
+    jira-as>=0.1.0 \
     requests \
     opentelemetry-api \
     opentelemetry-sdk \
