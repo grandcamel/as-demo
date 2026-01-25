@@ -51,7 +51,7 @@ HEALTH_OUTPUT=$(curl -sf -w "\n%{time_total}" "${BASE_URL}/api/health" 2>/dev/nu
     exit 1
 }
 
-HEALTH_RESPONSE=$(echo "$HEALTH_OUTPUT" | head -n -1)
+HEALTH_RESPONSE=$(echo "$HEALTH_OUTPUT" | sed '$d')
 HEALTH_TIME=$(echo "$HEALTH_OUTPUT" | tail -n 1)
 
 # Validate response time
@@ -130,7 +130,7 @@ LIVE_OUTPUT=$(curl -sf -w "\n%{time_total}" "${BASE_URL}/api/health/live" 2>/dev
 }
 
 if [ -n "${LIVE_OUTPUT:-}" ]; then
-    LIVE_RESPONSE=$(echo "$LIVE_OUTPUT" | head -n -1)
+    LIVE_RESPONSE=$(echo "$LIVE_OUTPUT" | sed '$d')
     LIVE_TIME=$(echo "$LIVE_OUTPUT" | tail -n 1)
 
     # Validate response time
@@ -171,7 +171,7 @@ READY_OUTPUT=$(curl -sf -w "\n%{time_total}" "${BASE_URL}/api/health/ready" 2>/d
 }
 
 if [ -n "${READY_OUTPUT:-}" ]; then
-    READY_RESPONSE=$(echo "$READY_OUTPUT" | head -n -1)
+    READY_RESPONSE=$(echo "$READY_OUTPUT" | sed '$d')
     READY_TIME=$(echo "$READY_OUTPUT" | tail -n 1)
 
     # Validate response time
