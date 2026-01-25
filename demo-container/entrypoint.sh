@@ -6,7 +6,8 @@
 # Displays welcome message, verifies connections, and starts session timer.
 # =============================================================================
 
-set -e
+# Don't use set -e as it can cause premature exit on read timeout
+# set -e
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -217,7 +218,10 @@ fi
 
 echo ""
 echo -e "${YELLOW}Press Enter to continue...${NC}"
-read -r
+# Use timeout to prevent hanging if TTY isn't ready; fallback to 2s delay
+if ! read -r -t 30 2>/dev/null; then
+    sleep 2
+fi
 
 # =============================================================================
 # Interactive Startup Menu
