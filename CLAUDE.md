@@ -541,6 +541,13 @@ apt-get update && apt-get install -y docker-compose-plugin
 - Certbot needs port 80 for HTTP challenge
 - After cert obtained, restart nginx with SSL config
 
+**Deploying Code Changes to queue-manager**
+- **Symptom**: Code changes don't take effect after `docker compose restart`
+- **Cause**: Node.js code is copied into the image at build time (`COPY . .` in Dockerfile)
+- **Wrong**: `docker compose restart queue-manager` (uses cached image with old code)
+- **Right**: `docker compose up -d --build queue-manager` (rebuilds image with new code)
+- **Key insight**: Restart only restarts the container with the existing image; rebuild is needed for code changes
+
 ### Docker-in-Docker Path Confusion
 
 **env-file Path Must Be Container Path, Not Host Path**
