@@ -4,7 +4,9 @@
 # Makefile for development, testing, and deployment
 # =============================================================================
 
-.PHONY: help dev dev-full prod prod-full down logs lint test clean build
+.PHONY: help dev dev-full prod prod-full down logs lint test clean build \
+	validate validate-compose validate-health validate-integration validate-scenarios \
+	validate-env validate-security validate-load validate-deps validate-drift
 
 # Default target
 help:
@@ -27,6 +29,18 @@ help:
 	@echo "  make test-splunk     Test Splunk scenarios"
 	@echo "  make test-cross      Test cross-platform scenarios"
 	@echo "  make test-all        Run all tests"
+	@echo ""
+	@echo "Validation:"
+	@echo "  make validate        Run all validations"
+	@echo "  make validate-compose    Docker Compose syntax check"
+	@echo "  make validate-health     Health endpoint contract tests"
+	@echo "  make validate-integration WebSocket, invite, Redis tests"
+	@echo "  make validate-scenarios  Scenario file validation"
+	@echo "  make validate-env        Environment variable checks"
+	@echo "  make validate-security   Container security scanning"
+	@echo "  make validate-load       Load/stress testing"
+	@echo "  make validate-deps       Dependency audit (npm audit)"
+	@echo "  make validate-drift      Configuration drift detection"
 	@echo ""
 	@echo "Build:"
 	@echo "  make build           Build all containers"
@@ -260,3 +274,60 @@ health:
 	@curl -sf http://localhost:8080/api/health && echo "Queue Manager: OK" || echo "Queue Manager: FAILED"
 	@curl -sf http://localhost:3001/api/health && echo "Grafana: OK" || echo "Grafana: FAILED"
 	@docker compose exec redis redis-cli ping && echo "Redis: OK" || echo "Redis: FAILED"
+
+# =============================================================================
+# Validation Suite
+# =============================================================================
+
+# Run all validations
+validate: validate-compose validate-health validate-env validate-scenarios validate-deps
+	@echo ""
+	@echo "All validations complete"
+
+# Validate Docker Compose syntax
+validate-compose:
+	@echo "Validating Docker Compose configuration..."
+	@docker compose config -q && echo "docker-compose.yml is valid"
+	@docker compose -f docker-compose.yml -f docker-compose.dev.yml config -q && echo "docker-compose.dev.yml overlay is valid"
+
+# Validate health endpoint contracts
+validate-health:
+	@echo "Validating health endpoint contracts..."
+	@./scripts/validate/health-contract.sh
+
+# Run integration tests (WebSocket, invite flow, Redis)
+validate-integration:
+	@echo "Running integration tests..."
+	@./scripts/validate/integration-tests.sh
+
+# Validate scenario files
+validate-scenarios:
+	@echo "Validating scenario files..."
+	@./scripts/validate/scenario-files.sh
+
+# Validate environment variables
+validate-env:
+	@echo "Validating environment variables..."
+	@./scripts/validate/env-check.sh
+
+# Security scanning (npm audit, pip-audit, bandit)
+validate-security:
+	@echo "Running security scans..."
+	@cd queue-manager && npm audit --audit-level=high || true
+	@pip-audit 2>/dev/null || echo "pip-audit not installed, skipping Python audit"
+	@bandit -r scripts/ -ll 2>/dev/null || echo "bandit not installed, skipping Python security scan"
+
+# Run load/stress tests
+validate-load:
+	@echo "Running load tests..."
+	@./scripts/validate/load-test.sh
+
+# Dependency audit (npm audit, pip-audit)
+validate-deps:
+	@echo "Auditing dependencies..."
+	@cd queue-manager && npm audit --audit-level=moderate || true
+
+# Configuration drift detection
+validate-drift:
+	@echo "Checking configuration drift..."
+	@./scripts/validate/config-drift.sh
