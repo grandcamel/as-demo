@@ -365,6 +365,22 @@ make dev  # Without --profile full
 ### Health endpoint shows missing platforms
 The health endpoint shows `enabled_platforms` (from ENABLED_PLATFORMS env) vs `configured_platforms` (platforms with valid credentials). If a platform is enabled but not configured, set its environment variables.
 
+### Docker exit code 125 in ttyd logs
+Exit code 125 means Docker daemon couldn't start the container. Check:
+```bash
+# View ttyd stderr in queue-manager logs
+docker logs as-demo-queue 2>&1 | grep ttyd
+
+# Common causes:
+# 1. --env-file path not accessible (use container path, not host path)
+# 2. Image not found
+# 3. Invalid docker run options
+# 4. Resource limits exceeded
+
+# Test docker command directly from queue-manager:
+docker exec as-demo-queue docker run --rm -e TERM=xterm as-demo-container:latest echo test
+```
+
 ## Adding New Cross-Platform Scenarios
 
 1. Create scenario files:
@@ -524,6 +540,21 @@ apt-get update && apt-get install -y docker-compose-plugin
 - Stop nginx before running certbot standalone: `docker stop as-demo-nginx`
 - Certbot needs port 80 for HTTP challenge
 - After cert obtained, restart nginx with SSL config
+
+### Docker-in-Docker Path Confusion
+
+**env-file Path Must Be Container Path, Not Host Path**
+- **Symptom**: Docker exits immediately with code 125, logs show "no such file or directory"
+- **Cause**: When Docker CLI runs inside a container (via socket mount), `--env-file` path must be readable by the CLI inside that container
+- **Wrong**: `--env-file /Users/jason/project/session-env/file.env` (host path)
+- **Right**: `--env-file /run/session-env/file.env` (container path where file is mounted)
+- **Key insight**: Docker CLI reads the env-file locally, then passes variables to the daemon. The CLI can't read host paths.
+
+**TTY Flags with ttyd**
+- **Symptom**: Docker exits with code 125 when spawned by ttyd
+- **Cause**: Using `-it` flags when ttyd already provides terminal
+- **Wrong**: `docker run --rm -it ...` (double TTY allocation)
+- **Right**: `docker run --rm -i ...` (interactive only, ttyd handles terminal)
 
 ### Secrets Management
 

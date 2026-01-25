@@ -177,7 +177,7 @@ async function startSession(redis, ws, client, processQueue) {
       '--once',
       '--writable',
       '--client-option', 'reconnect=0',
-      'docker', 'run', '--rm', '-it',
+      'docker', 'run', '--rm', '-i',
       // Security constraints for spawned containers
       '--memory', '2g',
       '--memory-swap', '2g',
@@ -195,7 +195,7 @@ async function startSession(redis, ws, client, processQueue) {
       '--tmpfs', '/tmp:rw,noexec,nosuid,size=512m',
       '--tmpfs', '/home/devuser:rw,noexec,nosuid,size=256m,uid=1000,gid=1000',
       // Environment configuration
-      '--env-file', envFile.hostPath,
+      '--env-file', envFile.containerPath,
       '-e', 'TERM=xterm',
       '-e', `SESSION_TIMEOUT_MINUTES=${config.SESSION_TIMEOUT_MINUTES}`,
       '-e', `ENABLED_PLATFORMS=${config.ENABLED_PLATFORMS.join(',')}`,
