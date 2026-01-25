@@ -4,5 +4,8 @@
   "description": "Combined Assistant Skills Demo Platform - agents and commands for development",
   "agents": [
     "agents/*.md"
+  ],
+  "commands": [
+    "commands/*.md"
   ]
 }
