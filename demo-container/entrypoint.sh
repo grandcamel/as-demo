@@ -25,11 +25,13 @@ SESSION_TIMEOUT_SECONDS=$((SESSION_TIMEOUT_MINUTES * 60))
 ENABLED_PLATFORMS="${ENABLED_PLATFORMS:-confluence,jira,splunk}"
 
 # =============================================================================
-# Restore pre-installed home directory content for read-only filesystem
+# Restore pre-installed Claude config for read-only filesystem
 # When container runs with --tmpfs /home/devuser, this restores Claude config
 # =============================================================================
-if [ -d /opt/devuser-home ] && [ ! -f /home/devuser/.restored ]; then
-    cp -a /opt/devuser-home/. /home/devuser/
+if [ -d /opt/devuser-claude ] && [ ! -f /home/devuser/.restored ]; then
+    cp -a /opt/devuser-claude /home/devuser/.claude
+    cp /opt/devuser-bashrc /home/devuser/.bashrc 2>/dev/null || true
+    cp /opt/devuser-profile /home/devuser/.profile 2>/dev/null || true
     touch /home/devuser/.restored
 fi
 

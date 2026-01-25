@@ -78,9 +78,11 @@ RUN claude plugin marketplace add https://github.com/grandcamel/splunk-assistant
 
 USER root
 
-# Save pre-installed home directory content for read-only filesystem support
+# Save only .claude config for read-only filesystem support (not entire home - venv is too large)
 # When container runs with --tmpfs /home/devuser, these files are restored at startup
-RUN cp -a /home/devuser /opt/devuser-home
+RUN cp -a /home/devuser/.claude /opt/devuser-claude && \
+    cp /home/devuser/.bashrc /opt/devuser-bashrc && \
+    cp /home/devuser/.profile /opt/devuser-profile
 
 # Ensure cargo bin is in PATH for all shells
 RUN echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> /home/devuser/.bashrc && \
