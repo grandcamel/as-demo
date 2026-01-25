@@ -193,7 +193,7 @@ async function startSession(redis, ws, client, processQueue) {
       '--cap-add', 'DAC_OVERRIDE',
       '--read-only',
       '--tmpfs', '/tmp:rw,noexec,nosuid,size=512m',
-      '--tmpfs', '/home/devuser:rw,noexec,nosuid,size=256m',
+      '--tmpfs', '/home/devuser:rw,noexec,nosuid,size=256m,uid=1000,gid=1000',
       // Environment configuration
       '--env-file', envFile.hostPath,
       '-e', 'TERM=xterm',
