@@ -12,8 +12,10 @@ This file provides guidance to Claude Code when working with the as-demo project
 as-demo/
 ├── .claude/                    # Claude Code plugin
 │   ├── plugin.json             # Plugin manifest
-│   └── agents/
-│       └── code-reviewer.md    # Security & code review agent
+│   ├── agents/
+│   │   └── code-reviewer.md    # Security & code review agent
+│   └── commands/
+│       └── invite.md           # /invite slash command
 ├── .github/workflows/
 │   └── ci.yml                  # GitHub Actions CI/CD
 ├── docker-compose.yml          # Production orchestration (profiles for Splunk)
@@ -49,13 +51,16 @@ as-demo/
 ├── landing-page/               # Platform selector + scenario browser
 ├── nginx/                      # Reverse proxy
 │   ├── nginx.conf              # Main config with security headers
-│   ├── demo.conf               # Production config
-│   └── dev.conf                # Development config
+│   ├── demo.conf               # HTTP config (development)
+│   ├── ssl.conf                # HTTPS config (production)
+│   └── dev.conf                # Development overrides
 ├── splunk/                     # Splunk-specific services
 │   ├── apps/demo_app/          # Splunk app
 │   ├── log-generator/          # Sample log generator
 │   └── seed-data/              # Demo data
-├── scripts/                    # Seed/cleanup scripts
+├── scripts/                    # Deployment & seed scripts
+│   ├── deploy.sh               # Production deployment script
+│   ├── healthcheck.sh          # Health verification script
 │   ├── confluence_base.py      # Confluence API client
 │   ├── seed_confluence_sandbox.py
 │   ├── cleanup_confluence_sandbox.py
@@ -63,6 +68,8 @@ as-demo/
 │   ├── seed_jira_sandbox.py
 │   ├── cleanup_jira_sandbox.py
 │   └── otel_setup.py           # OpenTelemetry setup
+├── docs/
+│   └── DEPLOYMENT.md           # Production deployment guide
 └── observability/              # LGTM stack
     ├── dashboards/
     │   ├── demo-home.json
@@ -384,3 +391,143 @@ SCENARIO_NAMES: {
 test-<name>:
     $(MAKE) test-cross SCENARIO=<name>
 ```
+
+## Production Deployment
+
+### Live Environment
+
+| Resource | Value |
+|----------|-------|
+| URL | https://demo.assistant-skills.dev |
+| Server IP | 143.110.131.254 |
+| Droplet | DigitalOcean "demo" (8GB RAM, 4 vCPU) |
+| Region | sfo2 (San Francisco) |
+| SSL | Let's Encrypt (auto-renews) |
+
+### Deployment Commands
+
+```bash
+# SSH to production
+ssh root@143.110.131.254
+
+# Deploy from local
+make deploy              # Full deployment
+make deploy-update       # Pull latest and redeploy
+make health-prod         # Run health checks
+make deploy-status       # Check status
+
+# On server
+cd /opt/as-demo
+docker compose ps        # Container status
+docker compose logs -f   # View logs
+```
+
+### DigitalOcean Management (doctl)
+
+```bash
+# List droplets
+doctl compute droplet list
+
+# DNS records
+doctl compute domain records list assistant-skills.dev
+
+# Resize droplet (requires power off)
+doctl compute droplet-action power-off <id> --wait
+doctl compute droplet-action resize <id> --size s-4vcpu-8gb --wait
+doctl compute droplet-action power-on <id> --wait
+
+# Rename droplet/project
+doctl compute droplet-action rename <id> --droplet-name <name>
+doctl projects update <id> --name <name>
+```
+
+## Slash Commands
+
+### /invite - Generate Production Invite
+
+```bash
+/invite                              # Default: 24h expiry
+/invite label="Demo for Acme"        # Custom label
+/invite expires=168                  # 1 week (hours)
+/invite label="VIP" expires=48       # Both parameters
+```
+
+Runs: `ssh root@143.110.131.254 "cd /opt/as-demo && make invite LABEL='...' EXPIRES=..."`
+
+## Lessons Learned & Common Pitfalls
+
+### DNS & SSL Issues
+
+**WHOIS Verification Blocks DNS**
+- **Symptom**: SSL certificate fails with wrong IP in error message
+- **Cause**: Namecheap requires WHOIS verification before pushing custom nameservers to registry
+- **Diagnosis**: `dig NS domain.com @ns-tld1.charlestonroadregistry.com` shows `failed-whois-verification.namecheap.com`
+- **Fix**: Complete WHOIS verification email from registrar
+
+**Check DNS at Multiple Levels**
+```bash
+# Registry level (authoritative)
+dig NS example.com @ns-tld1.charlestonroadregistry.com
+
+# DigitalOcean nameserver
+dig example.com @ns1.digitalocean.com
+
+# Public resolvers (may be cached)
+dig example.com @8.8.8.8
+dig example.com @1.1.1.1
+```
+
+### nginx Configuration
+
+**Upstream Port Error**
+- **Error**: `upstream "name" may not have port`
+- **Wrong**: `proxy_pass http://queue-manager:7681/;`
+- **Right**: Create separate upstream block:
+```nginx
+upstream terminal { server queue-manager:7681; }
+# Then use: proxy_pass http://terminal/;
+```
+
+**http2 Directive Deprecation**
+- **Warning**: `listen ... http2` is deprecated
+- **Fix**: Use `listen 443 ssl;` and add `http2 on;` directive separately
+
+### Docker Compose v5
+
+**pids_limit Conflict**
+- **Error**: `can't set distinct values on 'pids_limit' and 'deploy.resources.limits.pids'`
+- **Fix**: Use only one format, prefer `deploy.resources.limits.pids` for swarm compatibility
+
+**Environment File Location**
+- Docker Compose looks for `.env` in project root, not `secrets/.env`
+- **Fix**: Symlink `ln -sf secrets/.env .env` or use `--env-file secrets/.env`
+
+### Git & Empty Directories
+
+**Empty Directories Not Tracked**
+- Git doesn't track empty directories
+- Dockerfiles with `COPY dir/` fail if directory is empty
+- **Fix**: Add `.gitkeep` file to empty directories that must exist
+
+### Server Deployment
+
+**Docker Compose Plugin Installation**
+- Ubuntu's docker.io package doesn't include compose plugin
+- **Fix**: Add Docker's official apt repository:
+```bash
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
+apt-get update && apt-get install -y docker-compose-plugin
+```
+
+**SSL Certificate Provisioning**
+- Stop nginx before running certbot standalone: `docker stop as-demo-nginx`
+- Certbot needs port 80 for HTTP challenge
+- After cert obtained, restart nginx with SSL config
+
+### Secrets Management
+
+**Use `secret-get` for Local Secrets**
+- Local secrets can be retrieved with `secret-get <KEY>` command
+- Available: `CLAUDE_CODE_OAUTH_TOKEN`, `CONFLUENCE_API_TOKEN`, etc.
+- Never commit actual secrets to git
