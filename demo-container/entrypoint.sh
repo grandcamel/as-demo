@@ -24,6 +24,15 @@ SESSION_TIMEOUT_SECONDS=$((SESSION_TIMEOUT_MINUTES * 60))
 # Parse enabled platforms (default: all)
 ENABLED_PLATFORMS="${ENABLED_PLATFORMS:-confluence,jira,splunk}"
 
+# =============================================================================
+# Restore pre-installed home directory content for read-only filesystem
+# When container runs with --tmpfs /home/devuser, this restores Claude config
+# =============================================================================
+if [ -d /opt/devuser-home ] && [ ! -f /home/devuser/.restored ]; then
+    cp -a /opt/devuser-home/. /home/devuser/
+    touch /home/devuser/.restored
+fi
+
 # Setup Claude authentication
 # OAuth token requires .claude.json with hasCompletedOnboarding and bypassPermissionsModeAccepted
 if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
@@ -144,43 +153,40 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Install CLI tools based on enabled platforms
+# Display pre-installed CLI versions (installed at image build time for read-only filesystem)
 echo -e "${CYAN}Installing Assistant Skills CLIs...${NC}"
 
 if [[ "$ENABLED_PLATFORMS" == *"confluence"* ]]; then
-    if pip install --quiet --no-cache-dir confluence-as 2>/dev/null; then
-        CLI_VERSION=$(pip show confluence-as 2>/dev/null | grep Version | cut -d' ' -f2)
+    CLI_VERSION=$(pip show confluence-as 2>/dev/null | grep Version | cut -d' ' -f2)
+    if [ -n "$CLI_VERSION" ]; then
         echo -e "  ${GREEN}✓${NC} confluence CLI v${CLI_VERSION}"
     else
-        echo -e "  ${YELLOW}⚠${NC} Confluence CLI failed"
+        echo -e "  ${YELLOW}⚠${NC} Confluence CLI not available"
     fi
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"jira"* ]]; then
-    if pip install --quiet --no-cache-dir jira-as 2>/dev/null; then
-        CLI_VERSION=$(pip show jira-as 2>/dev/null | grep Version | cut -d' ' -f2)
+    CLI_VERSION=$(pip show jira-as 2>/dev/null | grep Version | cut -d' ' -f2)
+    if [ -n "$CLI_VERSION" ]; then
         echo -e "  ${GREEN}✓${NC} jira CLI v${CLI_VERSION}"
     else
-        echo -e "  ${YELLOW}⚠${NC} JIRA CLI failed"
+        echo -e "  ${YELLOW}⚠${NC} JIRA CLI not available"
     fi
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"splunk"* ]]; then
-    if pip install --quiet --no-cache-dir splunk-as 2>/dev/null; then
-        CLI_VERSION=$(pip show splunk-as 2>/dev/null | grep Version | cut -d' ' -f2)
+    CLI_VERSION=$(pip show splunk-as 2>/dev/null | grep Version | cut -d' ' -f2)
+    if [ -n "$CLI_VERSION" ]; then
         echo -e "  ${GREEN}✓${NC} splunk CLI v${CLI_VERSION}"
     else
-        echo -e "  ${YELLOW}⚠${NC} Splunk CLI failed"
+        echo -e "  ${YELLOW}⚠${NC} Splunk CLI not available"
     fi
 fi
 
-# Install plugins from marketplace (clear all plugin cache first)
+# Display pre-installed plugin versions (installed at image build time)
 echo -e "${CYAN}Installing Claude plugins...${NC}"
-rm -rf ~/.claude/plugins 2>/dev/null || true
 
 if [[ "$ENABLED_PLATFORMS" == *"confluence"* ]]; then
-    claude plugin marketplace add https://github.com/grandcamel/confluence-assistant-skills.git#main >/dev/null 2>&1 || true
-    claude plugin install confluence-assistant-skills@confluence-assistant-skills-marketplace --scope user >/dev/null 2>&1 || true
     INSTALLED_VERSION=$(cat ~/.claude/plugins/cache/*/confluence-assistant-skills/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
     if [ -n "$INSTALLED_VERSION" ]; then
         echo -e "  ${GREEN}✓${NC} Confluence plugin v${INSTALLED_VERSION}"
@@ -190,8 +196,6 @@ if [[ "$ENABLED_PLATFORMS" == *"confluence"* ]]; then
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"jira"* ]]; then
-    claude plugin marketplace add https://github.com/grandcamel/jira-assistant-skills.git#main >/dev/null 2>&1 || true
-    claude plugin install jira-assistant-skills@jira-assistant-skills-marketplace --scope user >/dev/null 2>&1 || true
     INSTALLED_VERSION=$(cat ~/.claude/plugins/cache/*/jira-assistant-skills/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
     if [ -n "$INSTALLED_VERSION" ]; then
         echo -e "  ${GREEN}✓${NC} JIRA plugin v${INSTALLED_VERSION}"
@@ -201,8 +205,6 @@ if [[ "$ENABLED_PLATFORMS" == *"jira"* ]]; then
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"splunk"* ]]; then
-    claude plugin marketplace add https://github.com/grandcamel/splunk-assistant-skills.git#main >/dev/null 2>&1 || true
-    claude plugin install splunk-assistant-skills@splunk-assistant-skills-marketplace --scope user >/dev/null 2>&1 || true
     INSTALLED_VERSION=$(cat ~/.claude/plugins/cache/*/splunk-assistant-skills/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
     if [ -n "$INSTALLED_VERSION" ]; then
         echo -e "  ${GREEN}✓${NC} Splunk plugin v${INSTALLED_VERSION}"

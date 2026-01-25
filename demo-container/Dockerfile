@@ -10,8 +10,11 @@ FROM ${BASE_IMAGE}
 
 USER root
 
-# Note: CLI tools are installed at runtime in entrypoint.sh
-# to pick up latest updates without rebuilding the image
+# Pre-install CLI tools (read-only filesystem prevents runtime pip install)
+RUN pip install --no-cache-dir --break-system-packages \
+    confluence-as \
+    jira-as \
+    splunk-as || true
 
 # Install glow for terminal markdown rendering
 RUN curl -fsSL -o /tmp/glow.tar.gz \
@@ -74,6 +77,10 @@ RUN claude plugin marketplace add https://github.com/grandcamel/splunk-assistant
     claude plugin install splunk-assistant-skills@splunk-assistant-skills-marketplace --scope user || true
 
 USER root
+
+# Save pre-installed home directory content for read-only filesystem support
+# When container runs with --tmpfs /home/devuser, these files are restored at startup
+RUN cp -a /home/devuser /opt/devuser-home
 
 # Ensure cargo bin is in PATH for all shells
 RUN echo 'export PATH="/usr/local/cargo/bin:$PATH"' >> /home/devuser/.bashrc && \
