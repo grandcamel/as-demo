@@ -49,10 +49,14 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/demo.conf:/etc/nginx/conf.d/default.conf:ro
+      # Use ssl.conf for production (copy to production.conf via deploy.sh)
+      - ./nginx/${NGINX_CONFIG:-demo.conf}:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/locations.include:/etc/nginx/conf.d/locations.include:ro
       - ./landing-page:/var/www/html:ro
+      # SSL certificates (Let's Encrypt)
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      # ACME challenge directory for certificate renewal
+      - /var/www/certbot:/var/www/certbot:ro
       - nginx-logs:/var/log/nginx
     command: >
       sh -c "rm -f /var/log/nginx/access.log /var/log/nginx/error.log &&
@@ -100,6 +104,12 @@ services:
       - MAX_QUEUE_SIZE=${MAX_QUEUE_SIZE:-10}
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
       - SESSION_ENV_HOST_PATH=${PWD}/session-env
+      - NODE_ENV=${NODE_ENV:-development}
+
+      # Production URL settings
+      - BASE_URL=${BASE_URL:-http://localhost:8080}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
 
       # Enabled platforms (comma-separated)
       - ENABLED_PLATFORMS=${ENABLED_PLATFORMS:-confluence,jira,splunk}

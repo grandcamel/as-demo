@@ -8,7 +8,8 @@
 	validate validate-compose validate-health validate-integration validate-scenarios \
 	validate-env validate-security validate-load validate-deps validate-drift \
 	validate-container-security validate-images validate-secrets validate-ports \
-	validate-volumes
+	validate-volumes \
+	deploy deploy-setup deploy-ssl deploy-update ssl-renew health-prod deploy-status
 
 # Default target
 help:
@@ -21,9 +22,18 @@ help:
 	@echo "  make logs            View all service logs"
 	@echo "  make logs-queue      View queue manager logs"
 	@echo ""
-	@echo "Production:"
+	@echo "Production (Local):"
 	@echo "  make prod            Deploy production (Atlassian only)"
 	@echo "  make prod-full       Deploy production (with Splunk)"
+	@echo ""
+	@echo "Production Deployment:"
+	@echo "  make deploy          Full production deployment"
+	@echo "  make deploy-setup    Initial server setup (Docker, certbot)"
+	@echo "  make deploy-ssl      Let's Encrypt certificate provisioning"
+	@echo "  make deploy-update   Pull latest and redeploy"
+	@echo "  make ssl-renew       Renew SSL certificates"
+	@echo "  make health-prod     Production health checks"
+	@echo "  make deploy-status   Deployment status"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test-confluence Test Confluence scenarios"
@@ -94,6 +104,38 @@ prod: network
 
 prod-full: network
 	docker compose --profile full up -d
+
+# =============================================================================
+# Deployment (Production Server)
+# =============================================================================
+
+# Full production deployment
+deploy:
+	@./scripts/deploy.sh
+
+# Initial server setup (Docker, certbot)
+deploy-setup:
+	@./scripts/deploy.sh --setup
+
+# Let's Encrypt certificate provisioning
+deploy-ssl:
+	@./scripts/deploy.sh --ssl
+
+# Pull latest and redeploy
+deploy-update:
+	@./scripts/deploy.sh --update
+
+# Renew SSL certificates
+ssl-renew:
+	@./scripts/deploy.sh --renew
+
+# Production health checks
+health-prod:
+	@./scripts/healthcheck.sh --production
+
+# Deployment status
+deploy-status:
+	@./scripts/deploy.sh --status
 
 # =============================================================================
 # Logs

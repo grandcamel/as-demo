@@ -1,0 +1,320 @@
+# =============================================================================
+# AS-Demo Health Alerting Rules
+# =============================================================================
+# Grafana alerting configuration for production monitoring.
+#
+# Alert Conditions:
+# - Health endpoint returns non-200 for >1 minute
+# - Redis unhealthy for >30 seconds
+# - Queue size > 80% capacity
+# - Session timeout rate > 10%
+# =============================================================================
+
+apiVersion: 1
+
+groups:
+  - name: as-demo-health
+    folder: AS-Demo
+    interval: 30s
+    rules:
+
+      # Health endpoint unavailable
+      - uid: health-endpoint-down
+        title: Health Endpoint Unavailable
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'probe_success{job="as-demo-health"}'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: "AS-Demo health endpoint is not responding"
+          description: "The /api/health endpoint has been unavailable for more than 1 minute."
+          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#troubleshooting"
+        labels:
+          severity: critical
+          service: as-demo
+          component: queue-manager
+
+      # Redis unhealthy
+      - uid: redis-unhealthy
+        title: Redis Unhealthy
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'redis_up{job="redis-exporter"}'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 30s
+        annotations:
+          summary: "AS-Demo Redis is unhealthy"
+          description: "Redis has been unreachable for more than 30 seconds. Sessions and queue state may be affected."
+          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#redis-issues"
+        labels:
+          severity: critical
+          service: as-demo
+          component: redis
+
+      # Queue at capacity
+      - uid: queue-at-capacity
+        title: Queue Near Capacity
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'as_demo_queue_size / as_demo_queue_max_size * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 80
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "AS-Demo queue is nearly full"
+          description: "The demo queue is at {{ $values.A }}% capacity. Users may experience long wait times."
+          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#queue-management"
+        labels:
+          severity: warning
+          service: as-demo
+          component: queue-manager
+
+      # High session timeout rate
+      - uid: high-session-timeouts
+        title: High Session Timeout Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(as_demo_session_timeouts_total[1h]) / rate(as_demo_sessions_started_total[1h]) * 100'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 10
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 30m
+        annotations:
+          summary: "High session timeout rate detected"
+          description: "More than 10% of sessions are timing out. This may indicate user experience issues."
+          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#session-issues"
+        labels:
+          severity: warning
+          service: as-demo
+          component: queue-manager
+
+      # Container unhealthy
+      - uid: container-unhealthy
+        title: Container Unhealthy
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'container_health_status{name=~"as-demo-.*"} == 0'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: count
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "AS-Demo container is unhealthy"
+          description: "One or more AS-Demo containers have reported unhealthy status for more than 2 minutes."
+          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#container-issues"
+        labels:
+          severity: warning
+          service: as-demo
+          component: containers
+
+      # SSL certificate expiring soon
+      - uid: ssl-cert-expiring
+        title: SSL Certificate Expiring Soon
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: '(probe_ssl_earliest_cert_expiry{job="as-demo-health"} - time()) / 86400'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 14
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 1h
+        annotations:
+          summary: "AS-Demo SSL certificate expiring soon"
+          description: "The SSL certificate will expire in {{ $values.A }} days. Please renew it."
+          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#ssl-renewal"
+        labels:
+          severity: warning
+          service: as-demo
+          component: nginx
+
+# =============================================================================
+# Contact Points (configure in Grafana UI or via API)
+# =============================================================================
+# Recommended contact points:
+# - Email: admin@assistant-skills.dev
+# - Slack: #as-demo-alerts (webhook)
+# - PagerDuty: For critical alerts (health endpoint down, Redis unhealthy)
+#
+# Example notification policy:
+# - severity=critical -> PagerDuty + Slack + Email
+# - severity=warning -> Slack + Email
+# =============================================================================
