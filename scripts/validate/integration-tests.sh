@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Integration Tests
 # Tests WebSocket connection, invite flow, and Redis connectivity

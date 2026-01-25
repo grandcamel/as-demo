@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Environment Variable Validation
 # Checks required environment variables for each platform

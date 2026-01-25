@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Configuration Drift Detection
 # Compares running container configuration vs expected configuration

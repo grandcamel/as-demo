@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Health Contract Validation
 # Validates /api/health, /api/health/live, /api/health/ready, and /api/status

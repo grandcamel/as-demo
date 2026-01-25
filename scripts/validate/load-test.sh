@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Load/Stress Testing
 # Basic load testing for the as-demo platform

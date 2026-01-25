@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Scenario Files Validation
 # Validates scenario files exist and have proper structure

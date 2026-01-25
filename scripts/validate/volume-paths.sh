@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Volume Path Validation
 # Validates that all volume mount paths referenced in docker-compose exist

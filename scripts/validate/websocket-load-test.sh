@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # WebSocket Load Testing
 # Tests WebSocket connection handling under load
