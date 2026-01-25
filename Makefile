@@ -184,14 +184,34 @@ status:
 	@echo ""
 	@curl -s http://localhost:8080/api/health | jq . 2>/dev/null || echo "Queue manager not responding"
 
-# Generate invite URL
+# Generate invite URL (creates invite directly in Redis)
+# Usage: make invite [LABEL="My Label"] [EXPIRES=24] (hours, default 24)
+LABEL ?= CLI Invite
+EXPIRES ?= 24
 invite:
-	@curl -s -X POST http://localhost:8080/api/invites \
-		-H "Content-Type: application/json" \
-		-d '{"label": "$(LABEL)", "expiresIn": "$(EXPIRES)"}' | jq .
+	@TOKEN=$$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 16); \
+	EXPIRES_AT=$$(date -u -v+$(EXPIRES)H +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -d "+$(EXPIRES) hours" +"%Y-%m-%dT%H:%M:%SZ"); \
+	CREATED_AT=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
+	TTL_SECONDS=$$(($(EXPIRES) * 3600)); \
+	INVITE_JSON="{\"token\":\"$$TOKEN\",\"label\":\"$(LABEL)\",\"createdAt\":\"$$CREATED_AT\",\"expiresAt\":\"$$EXPIRES_AT\",\"maxUses\":1,\"useCount\":0,\"status\":\"active\"}"; \
+	docker exec as-demo-redis redis-cli SET "invite:$$TOKEN" "$$INVITE_JSON" EX $$TTL_SECONDS > /dev/null && \
+	echo "" && \
+	echo "Invite created:" && \
+	echo "  Token:   $$TOKEN" && \
+	echo "  Label:   $(LABEL)" && \
+	echo "  Expires: $$EXPIRES_AT" && \
+	echo "" && \
+	echo "URL: http://localhost:8080/?invite=$$TOKEN"
 
+# List all active invites
 invite-list:
-	@curl -s http://localhost:8080/api/invites | jq .
+	@echo "Active invites:"
+	@docker exec as-demo-redis redis-cli KEYS "invite:*" | while read key; do \
+		if [ -n "$$key" ]; then \
+			data=$$(docker exec as-demo-redis redis-cli GET "$$key"); \
+			echo "$$data" | jq -r '"  - \(.token) [\(.status)] \(.label) (expires: \(.expiresAt))"' 2>/dev/null; \
+		fi; \
+	done || echo "  (none)"
 
 # Queue status
 queue-status:
