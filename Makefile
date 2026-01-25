@@ -110,6 +110,7 @@ build-demo:
 test-confluence:
 	@echo "Testing Confluence scenario: $(SCENARIO)"
 	docker run --rm --network as-demo-network \
+		-e TERM=xterm \
 		-e CONFLUENCE_API_TOKEN \
 		-e CONFLUENCE_EMAIL \
 		-e CONFLUENCE_SITE_URL \
@@ -121,6 +122,7 @@ test-confluence:
 test-jira:
 	@echo "Testing JIRA scenario: $(SCENARIO)"
 	docker run --rm --network as-demo-network \
+		-e TERM=xterm \
 		-e JIRA_API_TOKEN \
 		-e JIRA_EMAIL \
 		-e JIRA_SITE_URL \
@@ -132,6 +134,7 @@ test-jira:
 test-splunk:
 	@echo "Testing Splunk scenario: $(SCENARIO)"
 	docker run --rm --network as-demo-network \
+		-e TERM=xterm \
 		-e SPLUNK_URL \
 		-e SPLUNK_USERNAME \
 		-e SPLUNK_PASSWORD \
@@ -143,6 +146,7 @@ test-splunk:
 test-cross:
 	@echo "Testing cross-platform scenario: $(SCENARIO)"
 	docker run --rm --network as-demo-network \
+		-e TERM=xterm \
 		-e CONFLUENCE_API_TOKEN \
 		-e CONFLUENCE_EMAIL \
 		-e CONFLUENCE_SITE_URL \
