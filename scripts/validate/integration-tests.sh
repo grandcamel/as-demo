@@ -115,7 +115,7 @@ else
 fi
 
 # Test invite validation endpoint with valid token
-HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE_URL}/api/invite/${TEST_TOKEN}" 2>/dev/null) || HTTP_CODE="000"
+HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE_URL}/api/invite/validate?token=${TEST_TOKEN}" 2>/dev/null) || HTTP_CODE="000"
 if [ "$HTTP_CODE" = "200" ]; then
     log_success "Valid invite token returns 200"
 elif [ "$HTTP_CODE" = "404" ]; then
@@ -125,8 +125,8 @@ else
     ((WARNINGS++))
 fi
 
-# Test invite validation with invalid token
-HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE_URL}/api/invite/invalid-token-12345" 2>/dev/null) || HTTP_CODE="000"
+# Test invite validation with invalid token (use -s without -f to capture 4xx codes)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/invite/validate?token=invalid-token-12345" 2>/dev/null)
 if [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "404" ]; then
     log_success "Invalid invite correctly rejected ($HTTP_CODE)"
 else
@@ -299,7 +299,7 @@ echo ""
 echo "Testing container health..."
 
 # Check queue-manager container
-QM_STATUS=$(docker inspect --format='{{.State.Health.Status}}' as-demo-queue-manager 2>/dev/null) || QM_STATUS="not-found"
+QM_STATUS=$(docker inspect --format='{{.State.Health.Status}}' as-demo-queue 2>/dev/null) || QM_STATUS="not-found"
 if [ "$QM_STATUS" = "healthy" ]; then
     log_success "queue-manager container is healthy"
 elif [ "$QM_STATUS" = "not-found" ]; then
