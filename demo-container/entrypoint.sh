@@ -6,6 +6,11 @@
 # Displays welcome message, verifies connections, and starts session timer.
 # =============================================================================
 
+# Debug output to trace startup issues
+echo "[DEBUG] Entrypoint started at $(date)" >&2
+echo "[DEBUG] TTY: $(tty 2>&1 || echo 'no tty')" >&2
+echo "[DEBUG] TERM=$TERM" >&2
+
 # Don't use set -e as it can cause premature exit on read timeout
 # set -e
 
