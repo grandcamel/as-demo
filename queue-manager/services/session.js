@@ -184,8 +184,8 @@ async function startSession(redis, ws, client, processQueue) {
       '--cpus', '2',
       '--pids-limit', '256',
       '--security-opt', 'no-new-privileges:true',
-      '--security-opt', 'apparmor=docker-default',
-      '--security-opt', 'seccomp=default',
+      // Note: Docker applies default seccomp profile automatically
+      // Explicit 'seccomp=default' fails on some Docker installations
       '--cap-drop', 'ALL',
       '--cap-add', 'CHOWN',
       '--cap-add', 'SETUID',
