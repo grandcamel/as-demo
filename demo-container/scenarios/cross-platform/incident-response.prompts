@@ -1,0 +1,18 @@
+# Incident Response - Test Prompts
+# These prompts test the incident response workflow across Splunk, Confluence, and JIRA
+
+## Prompt 1: Alert Discovery
+User: Check Splunk for any recent error alerts in the last hour
+Expected Behavior: Should query Splunk for error-level events and summarize findings
+
+## Prompt 2: Runbook Lookup
+User: Find the incident response runbook in Confluence for database connection errors
+Expected Behavior: Should search Confluence for relevant runbook and return key steps
+
+## Prompt 3: Ticket Creation
+User: Create a JIRA incident ticket for the database connection issue with high priority
+Expected Behavior: Should create JIRA issue with appropriate fields and link to runbook
+
+## Prompt 4: Cross-Reference
+User: Link the JIRA ticket to the Confluence runbook and add the Splunk query results
+Expected Behavior: Should update JIRA ticket with links and attach relevant information

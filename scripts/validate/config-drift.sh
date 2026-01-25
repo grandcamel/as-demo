@@ -27,6 +27,13 @@ WARNINGS=0
 # Container Configuration Checks
 # =============================================================================
 
+# Container name mapping (service name -> actual container name)
+declare -A CONTAINER_NAMES
+CONTAINER_NAMES[queue-manager]="as-demo-queue"
+CONTAINER_NAMES[nginx]="as-demo-nginx"
+CONTAINER_NAMES[redis]="as-demo-redis"
+CONTAINER_NAMES[lgtm]="as-demo-lgtm"
+
 # Expected configuration values
 declare -A EXPECTED_CONFIG
 EXPECTED_CONFIG[queue-manager:memory]="2147483648"  # 2GB in bytes
@@ -35,7 +42,7 @@ EXPECTED_CONFIG[queue-manager:pids_limit]="256"
 
 check_container_config() {
     local container="$1"
-    local full_name="as-demo-${container}"
+    local full_name="${CONTAINER_NAMES[$container]:-as-demo-$container}"
 
     echo "Checking ${container} container configuration..."
 
@@ -202,7 +209,7 @@ echo "Checking image versions..."
 
 # Get running image versions
 for container in queue-manager nginx redis; do
-    full_name="as-demo-${container}"
+    full_name="${CONTAINER_NAMES[$container]:-as-demo-$container}"
     if docker ps --format '{{.Names}}' | grep -q "^${full_name}$"; then
         IMAGE=$(docker inspect --format '{{.Config.Image}}' "$full_name" 2>/dev/null) || IMAGE="unknown"
         CREATED=$(docker inspect --format '{{.Created}}' "$full_name" 2>/dev/null | cut -d'T' -f1) || CREATED="unknown"

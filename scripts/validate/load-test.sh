@@ -12,6 +12,15 @@ REQUESTS="${REQUESTS:-100}"
 DURATION="${DURATION:-30}"
 TEST_TYPE="${TEST_TYPE:-basic}"  # basic, sustained, spike
 
+# Failure thresholds
+MIN_RPS_THRESHOLD="${MIN_RPS_THRESHOLD:-100}"  # Minimum requests per second
+MAX_P99_THRESHOLD="${MAX_P99_THRESHOLD:-500}"  # Maximum p99 latency in ms
+LOAD_TEST_FAILED=0
+
+# Track last test results for threshold checking
+LAST_RPS=""
+LAST_P99=""
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -22,6 +31,37 @@ log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1"; }
 log_warn() { echo -e "${YELLOW}!${NC} $1"; }
 log_info() { echo "  $1"; }
+
+# =============================================================================
+# Threshold Checking
+# =============================================================================
+check_thresholds() {
+    local endpoint="$1"
+    local rps="$2"
+    local p99="$3"
+
+    if [ -n "$rps" ] && [ "$rps" != "" ]; then
+        rps_int=${rps%.*}  # Remove decimal
+        if [ -n "$rps_int" ] && [ "$rps_int" -gt 0 ] 2>/dev/null; then
+            if [ "$rps_int" -lt "$MIN_RPS_THRESHOLD" ]; then
+                log_error "$endpoint: RPS $rps below threshold $MIN_RPS_THRESHOLD"
+                LOAD_TEST_FAILED=1
+            else
+                log_success "$endpoint: RPS $rps meets threshold"
+            fi
+        fi
+    fi
+
+    if [ -n "$p99" ] && [ "$p99" != "" ]; then
+        # Convert p99 to ms if in seconds (hey outputs in seconds)
+        p99_ms=$(echo "$p99" | awk '{if ($1 < 10) print int($1 * 1000); else print int($1)}')
+        if [ -n "$p99_ms" ] && [ "$p99_ms" -gt 0 ] 2>/dev/null; then
+            if [ "$p99_ms" -gt "$MAX_P99_THRESHOLD" ]; then
+                log_warn "$endpoint: p99 ${p99_ms}ms exceeds threshold ${MAX_P99_THRESHOLD}ms"
+            fi
+        fi
+    fi
+}
 
 # =============================================================================
 # Check Prerequisites
@@ -70,7 +110,27 @@ run_hey_test() {
     local name="$2"
 
     echo "Testing $name..."
-    hey -n "$REQUESTS" -c "$CONCURRENCY" -q "${BASE_URL}${endpoint}" 2>&1 | grep -E "(Requests/sec|Average|Fastest|Slowest)" || true
+    RESULT=$(hey -n "$REQUESTS" -c "$CONCURRENCY" "${BASE_URL}${endpoint}" 2>&1)
+
+    # Extract key metrics
+    RPS=$(echo "$RESULT" | grep "Requests/sec" | awk '{print $2}')
+    AVG=$(echo "$RESULT" | grep "Average:" | head -1 | awk '{print $2}')
+    P50=$(echo "$RESULT" | grep "50%" | awk '{print $2}')
+    P95=$(echo "$RESULT" | grep "95%" | awk '{print $2}')
+    P99=$(echo "$RESULT" | grep "99%" | awk '{print $2}')
+
+    echo "  Requests/sec: $RPS"
+    echo "  Average: $AVG"
+    echo "  p50: $P50"
+    echo "  p95: $P95"
+    echo "  p99: $P99"
+
+    # Store for threshold checking
+    LAST_RPS="$RPS"
+    LAST_P99="$P99"
+
+    # Check thresholds
+    check_thresholds "$endpoint" "$RPS" "$P99"
     echo ""
 }
 
@@ -211,6 +271,34 @@ else
     log_error "Service not responding after load test"
 fi
 
+# =============================================================================
+# Memory Leak Detection
+# =============================================================================
+echo ""
+echo "Memory usage check..."
+if [ "${CHECK_MEMORY_LEAK:-false}" = "true" ]; then
+    QM_MEM_BEFORE=$(docker stats --no-stream --format "{{.MemUsage}}" as-demo-queue-manager 2>/dev/null | cut -d'/' -f1)
+    log_info "Initial memory: $QM_MEM_BEFORE"
+
+    # Run another quick burst
+    hey -n 1000 -c 20 "${BASE_URL}/api/health" > /dev/null 2>&1 || true
+
+    sleep 5  # Allow GC
+
+    QM_MEM_AFTER=$(docker stats --no-stream --format "{{.MemUsage}}" as-demo-queue-manager 2>/dev/null | cut -d'/' -f1)
+    log_info "After load memory: $QM_MEM_AFTER"
+    log_info "Memory leak detection requires manual review of before/after values"
+else
+    log_info "Memory leak check skipped (set CHECK_MEMORY_LEAK=true)"
+fi
+
 echo ""
 echo "=========================================="
+
+# Exit with error if thresholds not met
+if [ "$LOAD_TEST_FAILED" -eq 1 ]; then
+    log_error "Load test failed: throughput below target"
+    exit 1
+fi
+
 log_success "Load test complete"

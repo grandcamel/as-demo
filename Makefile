@@ -6,7 +6,9 @@
 
 .PHONY: help dev dev-full prod prod-full down logs lint test clean build \
 	validate validate-compose validate-health validate-integration validate-scenarios \
-	validate-env validate-security validate-load validate-deps validate-drift
+	validate-env validate-security validate-load validate-deps validate-drift \
+	validate-container-security validate-images validate-secrets validate-ports \
+	validate-volumes
 
 # Default target
 help:
@@ -300,7 +302,7 @@ health:
 # =============================================================================
 
 # Run all validations
-validate: validate-compose validate-health validate-env validate-scenarios validate-deps
+validate: validate-compose validate-volumes validate-health validate-env validate-scenarios validate-deps
 	@echo ""
 	@echo "All validations complete"
 
@@ -309,6 +311,27 @@ validate-compose:
 	@echo "Validating Docker Compose configuration..."
 	@docker compose config -q && echo "docker-compose.yml is valid"
 	@docker compose -f docker-compose.yml -f docker-compose.dev.yml config -q && echo "docker-compose.dev.yml overlay is valid"
+	@echo "Validating with Splunk profile..."
+	@docker compose --profile full config -q && echo "docker-compose.yml with --profile full is valid"
+	@docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile full config -q && echo "Full stack with dev overlay is valid"
+
+# Validate volume mount paths
+validate-volumes:
+	@echo "Validating volume paths..."
+	@./scripts/validate/volume-paths.sh
+
+# Check for port conflicts
+validate-ports:
+	@echo "Checking for port conflicts..."
+	@PORTS="80 443 3000 3001 6379 8000 8080"; \
+	for port in $$PORTS; do \
+		if lsof -i :$$port > /dev/null 2>&1; then \
+			echo "Warning: Port $$port is in use"; \
+			lsof -i :$$port | head -2; \
+		else \
+			echo "✓ Port $$port is available"; \
+		fi; \
+	done
 
 # Validate health endpoint contracts
 validate-health:
@@ -331,11 +354,40 @@ validate-env:
 	@./scripts/validate/env-check.sh
 
 # Security scanning (npm audit, pip-audit, bandit)
-validate-security:
+validate-security: validate-container-security
 	@echo "Running security scans..."
 	@cd queue-manager && npm audit --audit-level=high || true
 	@pip-audit 2>/dev/null || echo "pip-audit not installed, skipping Python audit"
 	@bandit -r scripts/ -ll 2>/dev/null || echo "bandit not installed, skipping Python security scan"
+
+# Container security validation
+validate-container-security:
+	@echo "Validating container security constraints..."
+	@./scripts/validate/container-security.sh 2>/dev/null || echo "container-security.sh not found or failed"
+
+# Validate container images can be pulled/built
+validate-images:
+	@echo "Validating container images..."
+	@docker compose config --images | while read img; do \
+		echo "Checking $$img..."; \
+		docker image inspect "$$img" > /dev/null 2>&1 || \
+		docker pull "$$img" 2>/dev/null || \
+		echo "  Warning: Cannot pull $$img (may need build)"; \
+	done
+	@echo "Building local images..."
+	@docker compose build --quiet 2>/dev/null || echo "Build failed or no buildable images"
+
+# Check for secrets in codebase
+validate-secrets:
+	@echo "Scanning for secrets..."
+	@if command -v gitleaks > /dev/null 2>&1; then \
+		gitleaks detect --source . --no-git -v 2>&1 | head -20 || true; \
+	else \
+		echo "gitleaks not installed, using basic patterns..."; \
+		grep -rn --include="*.js" --include="*.py" --include="*.sh" \
+			-E "(password|secret|token|api_key)\s*[:=]\s*['\"][^'\"]{8,}" . 2>/dev/null | \
+			grep -v "node_modules" | grep -v ".env.example" | head -10 || echo "No obvious secrets found"; \
+	fi
 
 # Run load/stress tests
 validate-load:

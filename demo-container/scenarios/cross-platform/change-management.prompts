@@ -1,0 +1,18 @@
+# Change Management - Test Prompts
+# These prompts test the change management workflow across JIRA, Confluence, and Splunk
+
+## Prompt 1: Change Request Review
+User: Show me the pending change requests in JIRA
+Expected Behavior: Should list JIRA issues of type Change Request with pending status
+
+## Prompt 2: Documentation Check
+User: Find the change management procedure in Confluence
+Expected Behavior: Should locate and summarize the change management process document
+
+## Prompt 3: Impact Assessment
+User: Check Splunk for any issues related to similar changes in the past month
+Expected Behavior: Should search Splunk for historical change-related events
+
+## Prompt 4: Approval Documentation
+User: Document the change approval in Confluence and update the JIRA ticket
+Expected Behavior: Should create Confluence page and update JIRA with approval status

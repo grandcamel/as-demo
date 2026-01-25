@@ -4,7 +4,9 @@
 # Validates scenario files exist and have proper structure
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
+# Note: We don't use set -e because arithmetic operations like ((WARNINGS++))
+# return 1 when incrementing from 0, which would cause premature exit
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -133,6 +135,148 @@ for platform in confluence jira splunk; do
             log_warn "${platform}/ has no scenario files"
             ((WARNINGS++))
         fi
+    fi
+done
+
+echo ""
+
+# =============================================================================
+# Skill Reference Validation
+# =============================================================================
+echo "Validating skill references..."
+while IFS= read -r -d '' file; do
+    RELATIVE_PATH="${file#$SCENARIOS_DIR/}"
+
+    # Only check cross-platform scenarios for skill references
+    if [[ "$file" == *"cross-platform"* ]]; then
+        if grep -q "Expected Behavior" "$file"; then
+            # Check if there are /skill-name style references
+            if grep -qE "/[a-z]+-[a-z]+" "$file"; then
+                log_success "${RELATIVE_PATH} has skill references"
+            else
+                log_warn "${RELATIVE_PATH} may be missing skill references in Expected Behavior"
+                ((WARNINGS++))
+            fi
+        fi
+    fi
+done < <(find "$SCENARIOS_DIR" -name "*.md" -type f -print0)
+
+echo ""
+
+# =============================================================================
+# Code Block Syntax Validation
+# =============================================================================
+echo "Validating code block syntax..."
+while IFS= read -r -d '' file; do
+    RELATIVE_PATH="${file#$SCENARIOS_DIR/}"
+
+    # Count opening and closing code fences
+    OPEN_FENCES=$(grep -c '```' "$file" 2>/dev/null) || OPEN_FENCES=0
+
+    # Code fences should be even (each block has open and close)
+    if [ $((OPEN_FENCES % 2)) -eq 0 ]; then
+        if [ "$OPEN_FENCES" -gt 0 ]; then
+            log_success "${RELATIVE_PATH} has $((OPEN_FENCES / 2)) valid code block(s)"
+        fi
+    else
+        log_error "${RELATIVE_PATH} has unmatched code fences ($OPEN_FENCES \`\`\` markers)"
+        ((ERRORS++))
+    fi
+done < <(find "$SCENARIOS_DIR" -name "*.md" -type f -print0)
+
+echo ""
+
+# =============================================================================
+# Cross-Platform Usage Validation
+# =============================================================================
+echo "Validating platform references in cross-platform scenarios..."
+
+# Get required platforms from config
+for scenario in incident-response sre-oncall change-management knowledge-sync; do
+    SCENARIO_FILE="${SCENARIOS_DIR}/cross-platform/${scenario}.md"
+    if [ -f "$SCENARIO_FILE" ]; then
+        case "$scenario" in
+            "incident-response"|"sre-oncall"|"change-management")
+                REQUIRED="confluence jira splunk"
+                ;;
+            "knowledge-sync")
+                REQUIRED="confluence jira"
+                ;;
+        esac
+
+        MISSING=""
+        for platform in $REQUIRED; do
+            if ! grep -qi "$platform" "$SCENARIO_FILE"; then
+                MISSING="$MISSING $platform"
+            fi
+        done
+
+        if [ -z "$MISSING" ]; then
+            log_success "${scenario}.md references all required platforms"
+        else
+            log_warn "${scenario}.md missing platform references:$MISSING"
+            ((WARNINGS++))
+        fi
+    fi
+done
+
+echo ""
+
+# =============================================================================
+# Cross-Platform Scenario Structure Validation
+# =============================================================================
+echo "Validating cross-platform scenario structure..."
+
+REQUIRED_SECTIONS=("Overview" "Prerequisites" "Workflow")
+
+for scenario in incident-response sre-oncall change-management knowledge-sync; do
+    SCENARIO_FILE="${SCENARIOS_DIR}/cross-platform/${scenario}.md"
+    if [ -f "$SCENARIO_FILE" ]; then
+        MISSING_SECTIONS=""
+        for section in "${REQUIRED_SECTIONS[@]}"; do
+            if ! grep -qi "## $section\|# $section" "$SCENARIO_FILE"; then
+                MISSING_SECTIONS="$MISSING_SECTIONS $section"
+            fi
+        done
+
+        if [ -z "$MISSING_SECTIONS" ]; then
+            log_success "${scenario}.md has all required sections"
+        else
+            log_warn "${scenario}.md missing sections:$MISSING_SECTIONS"
+            ((WARNINGS++))
+        fi
+    fi
+done
+
+echo ""
+
+# =============================================================================
+# .prompts Test File Validation
+# =============================================================================
+echo "Validating .prompts test files..."
+
+for scenario in incident-response sre-oncall change-management knowledge-sync; do
+    PROMPTS_FILE="${SCENARIOS_DIR}/cross-platform/${scenario}.prompts"
+    if [ -f "$PROMPTS_FILE" ]; then
+        # Check file has content
+        PROMPT_COUNT=$(grep -c "^## Prompt" "$PROMPTS_FILE" 2>/dev/null) || PROMPT_COUNT=0
+        if [ "$PROMPT_COUNT" -gt 0 ]; then
+            log_success "${scenario}.prompts has $PROMPT_COUNT test prompt(s)"
+        else
+            log_warn "${scenario}.prompts has no structured prompts"
+            ((WARNINGS++))
+        fi
+
+        # Check for Expected Behavior sections
+        if grep -q "Expected Behavior" "$PROMPTS_FILE"; then
+            log_success "${scenario}.prompts has Expected Behavior sections"
+        else
+            log_warn "${scenario}.prompts missing Expected Behavior sections"
+            ((WARNINGS++))
+        fi
+    else
+        log_error "${scenario}.prompts missing"
+        ((ERRORS++))
     fi
 done
 

@@ -105,7 +105,7 @@ app.use(helmet({
 app.use('/static', express.static(path.join(__dirname, 'static')));
 
 // Register routes
-healthRoutes.register(app);
+healthRoutes.register(app, redis);
 sessionRoutes.register(app, redis);
 scenarioRoutes.register(app);
 

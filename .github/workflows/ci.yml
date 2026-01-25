@@ -44,6 +44,21 @@ jobs:
         run: |
           ruff check scripts/ --ignore E501 || true
 
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   nodejs-tests:
     name: Node.js Tests
     runs-on: ubuntu-latest
@@ -102,8 +117,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create external network
+        run: docker network create as-demo-network || true
+
       - name: Validate docker-compose.yml
         run: make validate-compose
+
+      - name: Validate volume paths exist
+        run: |
+          # Check that referenced directories exist
+          for dir in nginx landing-page queue-manager demo-container scripts observability splunk secrets; do
+            if [ -d "$dir" ]; then
+              echo "✓ $dir/ exists"
+            else
+              echo "✗ $dir/ missing" && exit 1
+            fi
+          done
+
+      - name: Cleanup network
+        if: always()
+        run: docker network rm as-demo-network || true
 
   validate-scenarios:
     name: Validate Scenarios
@@ -157,9 +190,75 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Bandit
-        run: pip install bandit
+      - name: Install Python dependencies for audit
+        run: |
+          pip install pip-audit bandit
+          # Note: If CVEs are found in jaraco-context or protobuf, update with:
+          # pip install --upgrade jaraco-context protobuf
+
+      - name: Run pip-audit
+        run: |
+          pip-audit --ignore-vuln PYSEC-2022-43012 || true
+        continue-on-error: true
 
       - name: Run Bandit security scan
         run: |
           bandit -r scripts/ -ll || true
+
+  image-scan:
+    name: Container Image Scan
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build demo-container for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: ./demo-container
+          push: false
+          load: true
+          tags: as-demo-container:scan
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'as-demo-container:scan'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  container-security:
+    name: Container Security
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create network
+        run: docker network create as-demo-network || true
+
+      - name: Start minimal services for testing
+        run: |
+          docker compose up -d redis
+          sleep 5
+
+      - name: Check container security constraints
+        run: |
+          # Verify docker-compose has security configurations
+          docker compose config | grep -q "mem_limit\|memory:" && echo "Memory limits configured" || echo "Warning: No memory limits"
+          docker compose config | grep -q "pids_limit\|pids:" && echo "PID limits configured" || echo "Warning: No PID limits"
+          docker compose config | grep -q "cap_drop\|security_opt" && echo "Security options configured" || echo "Warning: No security options"
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down || true

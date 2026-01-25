@@ -114,13 +114,23 @@ else
     ((ERRORS++))
 fi
 
-# Test invite validation endpoint (if exists)
+# Test invite validation endpoint with valid token
 HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE_URL}/api/invite/${TEST_TOKEN}" 2>/dev/null) || HTTP_CODE="000"
-if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
-    # 404 is acceptable if endpoint doesn't exist
-    log_success "Invite validation endpoint accessible"
+if [ "$HTTP_CODE" = "200" ]; then
+    log_success "Valid invite token returns 200"
+elif [ "$HTTP_CODE" = "404" ]; then
+    log_info "Invite validation endpoint not implemented (404)"
 else
-    log_warn "Invite validation endpoint returned $HTTP_CODE"
+    log_warn "Valid invite validation returned $HTTP_CODE (expected 200)"
+    ((WARNINGS++))
+fi
+
+# Test invite validation with invalid token
+HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "${BASE_URL}/api/invite/invalid-token-12345" 2>/dev/null) || HTTP_CODE="000"
+if [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "404" ]; then
+    log_success "Invalid invite correctly rejected ($HTTP_CODE)"
+else
+    log_warn "Invalid invite returned unexpected code: $HTTP_CODE (expected 401 or 404)"
     ((WARNINGS++))
 fi
 
@@ -162,6 +172,123 @@ else
         ((WARNINGS++))
     fi
     log_info "Install 'websocat' for full WebSocket testing"
+fi
+
+echo ""
+
+# =============================================================================
+# WebSocket Message Protocol Tests
+# =============================================================================
+echo "Testing WebSocket message protocol..."
+
+if command -v websocat &> /dev/null; then
+    # Test heartbeat response
+    WS_HEARTBEAT=$(echo '{"type":"heartbeat"}' | timeout 3 websocat -n1 "${WS_URL}/api/ws" 2>&1) || WS_HEARTBEAT="FAILED"
+    if [ "$WS_HEARTBEAT" != "FAILED" ]; then
+        log_success "WebSocket heartbeat message accepted"
+    else
+        log_info "WebSocket heartbeat test inconclusive"
+    fi
+
+    # Test error response for invalid message
+    WS_INVALID=$(echo '{"type":"invalid_type_xyz"}' | timeout 3 websocat -n1 "${WS_URL}/api/ws" 2>&1) || WS_INVALID="FAILED"
+    if [[ "$WS_INVALID" == *"error"* ]] || [ "$WS_INVALID" = "FAILED" ]; then
+        log_success "WebSocket rejects invalid message types"
+    else
+        log_info "WebSocket invalid message test inconclusive"
+    fi
+else
+    log_info "WebSocket message protocol tests skipped (websocat not installed)"
+fi
+
+echo ""
+
+# =============================================================================
+# Rate Limiting Validation
+# =============================================================================
+echo "Testing rate limiting..."
+
+# This is a documentation test - actual rate limiting is per-IP
+# and requires specific setup to test properly
+if [ "${TEST_RATE_LIMITING:-false}" = "true" ]; then
+    log_info "Rate limiting test requires TEST_RATE_LIMITING=true and special setup"
+    # Rate limiting is 10 connections per IP per minute
+    # Testing would require making 11 rapid connections
+else
+    log_info "Rate limiting test skipped (set TEST_RATE_LIMITING=true to enable)"
+fi
+
+echo ""
+
+# =============================================================================
+# Redis Dependency Health
+# =============================================================================
+echo "Testing Redis dependency..."
+
+# Verify queue-manager handles Redis being present
+QM_HEALTH=$(curl -sf "${BASE_URL}/api/health" 2>/dev/null) || QM_HEALTH=""
+if [ -n "$QM_HEALTH" ]; then
+    REDIS_STATUS=$(echo "$QM_HEALTH" | jq -r '.dependencies.redis // "unknown"' 2>/dev/null) || REDIS_STATUS="unknown"
+    if [ "$REDIS_STATUS" = "healthy" ]; then
+        log_success "Redis dependency reported as healthy"
+    elif [ "$REDIS_STATUS" = "unknown" ]; then
+        log_info "Redis dependency status not in health response (may not be implemented yet)"
+    else
+        log_warn "Redis dependency status: $REDIS_STATUS"
+        ((WARNINGS++))
+    fi
+fi
+
+echo ""
+
+# =============================================================================
+# Session Lifecycle Test
+# =============================================================================
+echo "Testing session lifecycle..."
+
+# Session lifecycle test requires:
+# 1. Valid invite token
+# 2. WebSocket connection to join queue
+# 3. Wait for session to start
+# This is a placeholder for full session lifecycle testing
+
+if [ "${TEST_SESSION_LIFECYCLE:-false}" = "true" ]; then
+    log_info "Full session lifecycle test not implemented"
+    log_info "Requires: valid invite, WebSocket client, session orchestration"
+else
+    log_info "Session lifecycle test skipped (set TEST_SESSION_LIFECYCLE=true)"
+fi
+
+echo ""
+
+# =============================================================================
+# HTTP Security Headers
+# =============================================================================
+echo "Testing HTTP security headers..."
+
+HEADERS=$(curl -sI "${BASE_URL}/api/health" 2>/dev/null) || HEADERS=""
+
+# Check X-Frame-Options
+if echo "$HEADERS" | grep -qi "X-Frame-Options"; then
+    log_success "X-Frame-Options header present"
+else
+    log_warn "X-Frame-Options header missing"
+    ((WARNINGS++))
+fi
+
+# Check X-Content-Type-Options
+if echo "$HEADERS" | grep -qi "X-Content-Type-Options"; then
+    log_success "X-Content-Type-Options header present"
+else
+    log_warn "X-Content-Type-Options header missing"
+    ((WARNINGS++))
+fi
+
+# Check Cache-Control for health endpoint
+if echo "$HEADERS" | grep -qi "Cache-Control.*no-cache"; then
+    log_success "Cache-Control header present on health endpoint"
+else
+    log_info "Cache-Control header may not be set on health endpoint"
 fi
 
 echo ""

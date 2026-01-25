@@ -1,13 +1,15 @@
 #!/bin/bash
 # =============================================================================
 # Health Contract Validation
-# Validates /api/health and /api/status JSON response schemas
+# Validates /api/health, /api/health/live, /api/health/ready, and /api/status
+# JSON response schemas
 # =============================================================================
 
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 VERBOSE="${VERBOSE:-false}"
+RESPONSE_TIME_THRESHOLD="${RESPONSE_TIME_THRESHOLD:-0.1}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -22,18 +24,43 @@ log_info() { echo "  $1"; }
 
 ERRORS=0
 
+# Helper function to check response time
+check_response_time() {
+    local endpoint="$1"
+    local response_time="$2"
+    local threshold="$RESPONSE_TIME_THRESHOLD"
+
+    # Compare using bc for floating point comparison
+    if echo "$response_time < $threshold" | bc -l | grep -q 1; then
+        log_success "$endpoint response time: ${response_time}s (threshold: ${threshold}s)"
+        return 0
+    else
+        log_error "$endpoint response time: ${response_time}s exceeds threshold: ${threshold}s"
+        return 1
+    fi
+}
+
 # =============================================================================
 # /api/health endpoint validation
 # =============================================================================
 echo "Validating /api/health endpoint..."
 
-HEALTH_RESPONSE=$(curl -sf "${BASE_URL}/api/health" 2>/dev/null) || {
+# Capture response and response time
+HEALTH_OUTPUT=$(curl -sf -w "\n%{time_total}" "${BASE_URL}/api/health" 2>/dev/null) || {
     log_error "/api/health endpoint not responding"
     exit 1
 }
 
+HEALTH_RESPONSE=$(echo "$HEALTH_OUTPUT" | head -n -1)
+HEALTH_TIME=$(echo "$HEALTH_OUTPUT" | tail -n 1)
+
+# Validate response time
+if ! check_response_time "/api/health" "$HEALTH_TIME"; then
+    ((ERRORS++))
+fi
+
 # Validate required fields (use 'has' to check presence, not value)
-for field in status timestamp enabled_platforms configured_platforms; do
+for field in status timestamp enabled_platforms configured_platforms dependencies; do
     if echo "$HEALTH_RESPONSE" | jq -e "has(\"$field\")" > /dev/null 2>&1; then
         if [ "$VERBOSE" = "true" ]; then
             VALUE=$(echo "$HEALTH_RESPONSE" | jq -r ".$field")
@@ -46,6 +73,20 @@ for field in status timestamp enabled_platforms configured_platforms; do
         ((ERRORS++))
     fi
 done
+
+# Validate dependencies.redis field
+if echo "$HEALTH_RESPONSE" | jq -e ".dependencies.redis" > /dev/null 2>&1; then
+    REDIS_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.dependencies.redis')
+    if [[ "$REDIS_STATUS" =~ ^(healthy|unhealthy)$ ]]; then
+        log_success "health.dependencies.redis has valid value: $REDIS_STATUS"
+    else
+        log_error "health.dependencies.redis has invalid value: $REDIS_STATUS (expected: healthy|unhealthy)"
+        ((ERRORS++))
+    fi
+else
+    log_error "health.dependencies.redis missing"
+    ((ERRORS++))
+fi
 
 # Validate status is 'ok' or known value
 STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.status')
@@ -75,6 +116,102 @@ for field in enabled_platforms configured_platforms; do
         ((ERRORS++))
     fi
 done
+
+echo ""
+
+# =============================================================================
+# /api/health/live endpoint validation
+# =============================================================================
+echo "Validating /api/health/live endpoint..."
+
+LIVE_OUTPUT=$(curl -sf -w "\n%{time_total}" "${BASE_URL}/api/health/live" 2>/dev/null) || {
+    log_error "/api/health/live endpoint not responding"
+    ((ERRORS++))
+}
+
+if [ -n "${LIVE_OUTPUT:-}" ]; then
+    LIVE_RESPONSE=$(echo "$LIVE_OUTPUT" | head -n -1)
+    LIVE_TIME=$(echo "$LIVE_OUTPUT" | tail -n 1)
+
+    # Validate response time
+    if ! check_response_time "/api/health/live" "$LIVE_TIME"; then
+        ((ERRORS++))
+    fi
+
+    # Validate required fields
+    for field in status timestamp; do
+        if echo "$LIVE_RESPONSE" | jq -e "has(\"$field\")" > /dev/null 2>&1; then
+            log_success "live.$field present"
+        else
+            log_error "live.$field missing"
+            ((ERRORS++))
+        fi
+    done
+
+    # Validate status is 'ok'
+    LIVE_STATUS=$(echo "$LIVE_RESPONSE" | jq -r '.status')
+    if [ "$LIVE_STATUS" = "ok" ]; then
+        log_success "live.status is 'ok'"
+    else
+        log_error "live.status is not 'ok': $LIVE_STATUS"
+        ((ERRORS++))
+    fi
+fi
+
+echo ""
+
+# =============================================================================
+# /api/health/ready endpoint validation
+# =============================================================================
+echo "Validating /api/health/ready endpoint..."
+
+READY_OUTPUT=$(curl -sf -w "\n%{time_total}" "${BASE_URL}/api/health/ready" 2>/dev/null) || {
+    log_error "/api/health/ready endpoint not responding"
+    ((ERRORS++))
+}
+
+if [ -n "${READY_OUTPUT:-}" ]; then
+    READY_RESPONSE=$(echo "$READY_OUTPUT" | head -n -1)
+    READY_TIME=$(echo "$READY_OUTPUT" | tail -n 1)
+
+    # Validate response time
+    if ! check_response_time "/api/health/ready" "$READY_TIME"; then
+        ((ERRORS++))
+    fi
+
+    # Validate required fields
+    for field in status timestamp dependencies; do
+        if echo "$READY_RESPONSE" | jq -e "has(\"$field\")" > /dev/null 2>&1; then
+            log_success "ready.$field present"
+        else
+            log_error "ready.$field missing"
+            ((ERRORS++))
+        fi
+    done
+
+    # Validate status is valid
+    READY_STATUS=$(echo "$READY_RESPONSE" | jq -r '.status')
+    if [[ "$READY_STATUS" =~ ^(ok|error)$ ]]; then
+        log_success "ready.status has valid value: $READY_STATUS"
+    else
+        log_error "ready.status has invalid value: $READY_STATUS (expected: ok|error)"
+        ((ERRORS++))
+    fi
+
+    # Validate dependencies.redis field
+    if echo "$READY_RESPONSE" | jq -e ".dependencies.redis" > /dev/null 2>&1; then
+        REDIS_STATUS=$(echo "$READY_RESPONSE" | jq -r '.dependencies.redis')
+        if [[ "$REDIS_STATUS" =~ ^(healthy|unhealthy)$ ]]; then
+            log_success "ready.dependencies.redis has valid value: $REDIS_STATUS"
+        else
+            log_error "ready.dependencies.redis has invalid value: $REDIS_STATUS (expected: healthy|unhealthy)"
+            ((ERRORS++))
+        fi
+    else
+        log_error "ready.dependencies.redis missing"
+        ((ERRORS++))
+    fi
+fi
 
 echo ""
 
@@ -137,6 +274,11 @@ echo ""
 # =============================================================================
 # Summary
 # =============================================================================
+echo ""
+log_info "Note: /api/health returns 503 when Redis is down (degraded state)."
+log_info "This cannot be easily tested without stopping Redis during the test."
+echo ""
+
 if [ $ERRORS -eq 0 ]; then
     log_success "All health contract validations passed"
     exit 0

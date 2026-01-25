@@ -1,0 +1,18 @@
+# SRE On-Call - Test Prompts
+# These prompts test the SRE on-call workflow across Splunk, Confluence, and JIRA
+
+## Prompt 1: Alert Triage
+User: Show me the current Splunk alerts that need attention
+Expected Behavior: Should list active alerts with severity and timestamp
+
+## Prompt 2: Knowledge Base Search
+User: What's the troubleshooting guide for high CPU alerts?
+Expected Behavior: Should search Confluence for CPU troubleshooting documentation
+
+## Prompt 3: Task Creation
+User: Create a task in JIRA to investigate the CPU spike on prod-web-01
+Expected Behavior: Should create JIRA task with server details and assign to on-call
+
+## Prompt 4: Status Update
+User: Update the Confluence on-call log with today's incidents
+Expected Behavior: Should update or create on-call log entry with incident summary

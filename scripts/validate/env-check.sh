@@ -65,6 +65,123 @@ OPTIONAL_VARS=(
 # Helper Functions
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# Email format validation
+# -----------------------------------------------------------------------------
+validate_email() {
+    local var_name="$1"
+    local value="${!var_name:-}"
+
+    if [ -z "$value" ]; then
+        return 0  # Skip if not set (already reported)
+    fi
+
+    if [[ "$value" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+        log_success "$var_name has valid email format"
+    else
+        log_error "$var_name has invalid email format: $value"
+        ((ERRORS++))
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Atlassian URL format validation
+# -----------------------------------------------------------------------------
+validate_atlassian_url() {
+    local var_name="$1"
+    local value="${!var_name:-}"
+
+    if [ -z "$value" ]; then
+        return 0
+    fi
+
+    if [[ "$value" =~ \.atlassian\.net/?$ ]]; then
+        log_success "$var_name is valid Atlassian URL"
+    else
+        log_warn "$var_name may not be an Atlassian Cloud URL: $value"
+        ((WARNINGS++))
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# SESSION_SECRET strength validation
+# -----------------------------------------------------------------------------
+validate_session_secret() {
+    local value="${SESSION_SECRET:-}"
+
+    if [ -z "$value" ]; then
+        return 0
+    fi
+
+    if [ ${#value} -lt 32 ]; then
+        log_error "SESSION_SECRET too short (${#value} chars, need 32+)"
+        ((ERRORS++))
+        return
+    fi
+
+    local weak_patterns=("change-me" "password" "secret123" "test" "example" "default")
+    local lower_value=$(echo "$value" | tr '[:upper:]' '[:lower:]')
+    for pattern in "${weak_patterns[@]}"; do
+        if [[ "$lower_value" == *"$pattern"* ]]; then
+            log_warn "SESSION_SECRET contains weak pattern: $pattern"
+            ((WARNINGS++))
+            return
+        fi
+    done
+
+    log_success "SESSION_SECRET strength OK (${#value} chars)"
+}
+
+# -----------------------------------------------------------------------------
+# Placeholder value detection
+# -----------------------------------------------------------------------------
+detect_placeholder() {
+    local var_name="$1"
+    local value="${!var_name:-}"
+
+    if [ -z "$value" ]; then
+        return 0
+    fi
+
+    local placeholders=("your-" "example" "change-me" "xxx" "TODO" "CHANGEME" "placeholder")
+    local lower_value=$(echo "$value" | tr '[:upper:]' '[:lower:]')
+    for placeholder in "${placeholders[@]}"; do
+        if [[ "$lower_value" == *"$placeholder"* ]]; then
+            log_error "$var_name appears to be a placeholder value"
+            ((ERRORS++))
+            return 1
+        fi
+    done
+    return 0
+}
+
+# -----------------------------------------------------------------------------
+# Numeric range validation
+# -----------------------------------------------------------------------------
+validate_numeric_range() {
+    local var_name="$1"
+    local min="$2"
+    local max="$3"
+    local value="${!var_name:-}"
+
+    if [ -z "$value" ]; then
+        return 0
+    fi
+
+    if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+        log_error "$var_name is not a valid number: $value"
+        ((ERRORS++))
+        return
+    fi
+
+    if [ "$value" -lt "$min" ] || [ "$value" -gt "$max" ]; then
+        log_warn "$var_name=$value is outside recommended range ($min-$max)"
+        ((WARNINGS++))
+    else
+        log_success "$var_name=$value is within valid range"
+    fi
+}
+
 check_var() {
     local var_name="$1"
     local description="$2"
@@ -224,6 +341,94 @@ validate_url() {
 for url_var in CONFLUENCE_SITE_URL JIRA_SITE_URL SPLUNK_URL; do
     validate_url "$url_var"
 done
+
+echo ""
+
+# =============================================================================
+# Email Format Validation
+# =============================================================================
+echo "Validating email formats..."
+
+for email_var in CONFLUENCE_EMAIL JIRA_EMAIL; do
+    validate_email "$email_var"
+done
+
+echo ""
+
+# =============================================================================
+# Atlassian URL Validation
+# =============================================================================
+echo "Validating Atlassian URLs..."
+
+for atlassian_var in CONFLUENCE_SITE_URL JIRA_SITE_URL; do
+    validate_atlassian_url "$atlassian_var"
+done
+
+echo ""
+
+# =============================================================================
+# SESSION_SECRET Strength Validation
+# =============================================================================
+echo "Validating SESSION_SECRET strength..."
+
+validate_session_secret
+
+echo ""
+
+# =============================================================================
+# Placeholder Value Detection
+# =============================================================================
+echo "Checking for placeholder values..."
+
+# Check all required variables for placeholder patterns
+PLACEHOLDER_CHECK_VARS=(
+    "SESSION_SECRET"
+    "CONFLUENCE_API_TOKEN"
+    "CONFLUENCE_EMAIL"
+    "CONFLUENCE_SITE_URL"
+    "JIRA_API_TOKEN"
+    "JIRA_EMAIL"
+    "JIRA_SITE_URL"
+    "SPLUNK_URL"
+    "SPLUNK_USERNAME"
+    "SPLUNK_PASSWORD"
+)
+
+for var in "${PLACEHOLDER_CHECK_VARS[@]}"; do
+    detect_placeholder "$var"
+done
+
+echo ""
+
+# =============================================================================
+# Claude Authentication Check
+# =============================================================================
+echo "Checking Claude authentication..."
+
+CLAUDE_OAUTH="${CLAUDE_CODE_OAUTH_TOKEN:-}"
+ANTHROPIC_KEY="${ANTHROPIC_API_KEY:-}"
+
+if [ -n "$CLAUDE_OAUTH" ] || [ -n "$ANTHROPIC_KEY" ]; then
+    if [ -n "$CLAUDE_OAUTH" ]; then
+        log_success "CLAUDE_CODE_OAUTH_TOKEN is set"
+    fi
+    if [ -n "$ANTHROPIC_KEY" ]; then
+        log_success "ANTHROPIC_API_KEY is set"
+    fi
+else
+    log_warn "No Claude authentication configured (set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)"
+    ((WARNINGS++))
+fi
+
+echo ""
+
+# =============================================================================
+# Numeric Range Validation
+# =============================================================================
+echo "Validating numeric configuration values..."
+
+validate_numeric_range "SESSION_TIMEOUT_MINUTES" 5 480
+validate_numeric_range "MAX_QUEUE_SIZE" 1 100
 
 echo ""
 

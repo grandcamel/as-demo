@@ -68,6 +68,27 @@ services:
     networks:
       - demo-network
     logging: *logging-standard
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    mem_limit: 256m
+    cpus: 0.5
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=100M
+      - /var/run:size=10M
 
   queue-manager:
     build: ./queue-manager
@@ -131,6 +152,26 @@ services:
     networks:
       - demo-network
     logging: *logging-standard
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 256
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
 
   redis:
     image: redis:alpine
@@ -144,6 +185,23 @@ services:
     networks:
       - demo-network
     logging: *logging-small
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    mem_limit: 512m
+    cpus: 0.5
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
 
   lgtm:
     image: grafana/otel-lgtm:latest
@@ -172,6 +230,23 @@ services:
     networks:
       - demo-network
     logging: *logging-standard
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+    mem_limit: 2g
+    cpus: 1
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
 
   redis-exporter:
     image: oliver006/redis_exporter:latest
@@ -232,7 +307,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 180s
+      start_period: 360s
     networks:
       - demo-network
     deploy:
@@ -283,6 +358,7 @@ services:
     volumes:
       - ./splunk/seed-data/data:/data:ro
       - seed-status:/status
+    restart: "no"
     networks:
       - demo-network
     logging: *logging-small

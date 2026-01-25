@@ -1,0 +1,18 @@
+# Knowledge Sync - Test Prompts
+# These prompts test the knowledge sync workflow between JIRA and Confluence
+
+## Prompt 1: Resolved Issues Query
+User: List the JIRA issues resolved this week
+Expected Behavior: Should query JIRA for recently resolved issues with summaries
+
+## Prompt 2: Release Notes Search
+User: Find the current release notes page in Confluence
+Expected Behavior: Should locate the release notes page for the current version
+
+## Prompt 3: Content Update
+User: Add the resolved issues to the release notes in Confluence
+Expected Behavior: Should update Confluence page with formatted issue summaries
+
+## Prompt 4: Verification
+User: Verify the release notes match the resolved JIRA issues
+Expected Behavior: Should cross-reference Confluence content with JIRA data
