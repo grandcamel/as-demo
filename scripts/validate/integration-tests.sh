@@ -4,7 +4,7 @@
 # Tests WebSocket connection, invite flow, and Redis connectivity
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 WS_URL="${WS_URL:-ws://localhost:8080}"
