@@ -208,6 +208,14 @@ async function startSession(redis, ws, client, processQueue) {
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
+    // Log ttyd stdout/stderr for debugging
+    ttydProcess.stdout.on('data', (data) => {
+      console.log(`[ttyd stdout] ${data.toString().trim()}`);
+    });
+    ttydProcess.stderr.on('data', (data) => {
+      console.log(`[ttyd stderr] ${data.toString().trim()}`);
+    });
+
     // Record spawn time
     const spawnDuration = (Date.now() - spawnStartTime) / 1000;
     ttydSpawnHistogram?.record(spawnDuration);
