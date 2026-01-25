@@ -51,6 +51,8 @@ help:
 	@echo "  make lint            Run linters"
 	@echo "  make invite          Generate invite URL"
 	@echo "  make status          Check service status"
+	@echo "  make env-splunk      Output Splunk env vars (use with eval)"
+	@echo "  make env-splunk-show Show Splunk env vars"
 	@echo "  make clean           Remove containers and volumes"
 
 # =============================================================================
@@ -195,6 +197,24 @@ lint-fix:
 # =============================================================================
 # Utilities
 # =============================================================================
+
+# Set Splunk environment variables for local as-demo-splunk instance
+# Usage: eval $(make env-splunk)
+env-splunk:
+	@echo "export SPLUNK_URL=https://localhost:8089"
+	@echo "export SPLUNK_USERNAME=admin"
+	@echo "export SPLUNK_PASSWORD=DemoPass123!"
+	@echo "export SPLUNK_HEC_TOKEN=demo-hec-token-12345"
+
+# Print Splunk env vars (human readable)
+env-splunk-show:
+	@echo "Splunk environment variables for local instance:"
+	@echo "  SPLUNK_URL=https://localhost:8089"
+	@echo "  SPLUNK_USERNAME=admin"
+	@echo "  SPLUNK_PASSWORD=DemoPass123!"
+	@echo "  SPLUNK_HEC_TOKEN=demo-hec-token-12345"
+	@echo ""
+	@echo "To set in current shell: eval \$$(make env-splunk)"
 
 # Check service status
 status:
