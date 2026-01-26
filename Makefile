@@ -284,6 +284,7 @@ SCENARIO ?= page
 MODEL ?= sonnet
 JUDGE_MODEL ?= haiku
 MAX_ATTEMPTS ?= 3
+MOCK ?=
 
 # Run skill test with verbose output (for development)
 # Usage: make test-skill-dev PLATFORM=jira SCENARIO=issue
@@ -298,15 +299,16 @@ test-skill-dev:
 		--verbose
 
 # Run skill refinement loop (iterative fix cycle)
-# Usage: make refine-skill PLATFORM=confluence SCENARIO=page MAX_ATTEMPTS=5
+# Usage: make refine-skill PLATFORM=confluence SCENARIO=page MAX_ATTEMPTS=5 MOCK=true
 refine-skill:
-	@echo "Running skill refinement loop: $(PLATFORM)/$(SCENARIO)"
+	@echo "Running skill refinement loop: $(PLATFORM)/$(SCENARIO)$(if $(filter true,$(MOCK)), [MOCK],)"
 	python demo-container/skill-refine-loop.py \
 		--scenario $(SCENARIO) \
 		--platform $(PLATFORM) \
 		--max-attempts $(MAX_ATTEMPTS) \
 		--model $(MODEL) \
 		--judge-model $(JUDGE_MODEL) \
+		$(if $(filter true,$(MOCK)),--mock,) \
 		--verbose
 
 # Run skill test with mock mode (no real API calls)
