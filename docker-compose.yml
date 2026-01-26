@@ -163,14 +163,8 @@ services:
       - demo-network
     logging: *logging-standard
     # Resource limits
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '2'
-        reservations:
-          memory: 512M
     mem_limit: 2g
+    memswap_limit: 2g
     cpus: 2
     pids_limit: 256
     # Security hardening
