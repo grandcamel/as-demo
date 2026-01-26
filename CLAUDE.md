@@ -237,6 +237,29 @@ SPLUNK_PASSWORD=DemoPass123!
 SPLUNK_HEC_TOKEN=demo-hec-token
 ```
 
+### Skills Path Configuration
+
+The `refine-skill` command needs to locate platform skills repositories. Paths are resolved in order:
+
+1. Platform-specific env var (e.g., `CONFLUENCE_SKILLS_PATH`)
+2. `SKILLS_BASE_PATH` + default subdirectory
+3. `{as-demo parent}` + default subdirectory (automatic default)
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `SKILLS_BASE_PATH` | Base directory for all skills repos | Parent of as-demo directory |
+| `CONFLUENCE_SKILLS_PATH` | Confluence skills repo path | `{base}/Confluence-Assistant-Skills` |
+| `JIRA_SKILLS_PATH` | JIRA skills repo path | `{base}/Jira-Assistant-Skills` |
+| `SPLUNK_SKILLS_PATH` | Splunk skills repo path | `{base}/Splunk-Assistant-Skills` |
+
+```bash
+# Example: Override base path for all platforms
+SKILLS_BASE_PATH=/opt/skills make refine-skill PLATFORM=jira SCENARIO=issue
+
+# Example: Override single platform
+CONFLUENCE_SKILLS_PATH=/home/user/my-confluence make refine-skill PLATFORM=confluence SCENARIO=page
+```
+
 ## Deployment Modes
 
 | Mode | Command | Services |
