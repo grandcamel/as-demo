@@ -47,3 +47,8 @@ dump.rdb
 
 # Claude checkpoints
 /tmp/claude-checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
