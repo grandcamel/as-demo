@@ -70,11 +70,11 @@ RUN claude plugin marketplace add https://github.com/grandcamel/confluence-assis
 
 # JIRA
 RUN claude plugin marketplace add https://github.com/grandcamel/jira-assistant-skills.git#main || true && \
-    claude plugin install jira-assistant-skills@jira-assistant-skills-marketplace --scope user || true
+    claude plugin install jira-assistant-skills@jira-assistant-skills --scope user || true
 
 # Splunk
 RUN claude plugin marketplace add https://github.com/grandcamel/splunk-assistant-skills.git#main || true && \
-    claude plugin install splunk-assistant-skills@splunk-assistant-skills-marketplace --scope user || true
+    claude plugin install splunk-assistant-skills@splunk-assistant-skills --scope user || true
 
 USER root
 
