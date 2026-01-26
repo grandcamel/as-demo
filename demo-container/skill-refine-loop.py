@@ -28,11 +28,17 @@ from pathlib import Path
 
 AS_DEMO_PATH = Path(__file__).parent.parent
 
+# Base path for skills repositories (default: parent of as-demo)
+# Can be overridden with SKILLS_BASE_PATH environment variable
+SKILLS_BASE_PATH = Path(os.environ.get("SKILLS_BASE_PATH", AS_DEMO_PATH.parent))
+
 # Platform-specific configuration
+# Each platform can override its path with {PLATFORM}_SKILLS_PATH env var
+# Otherwise defaults to SKILLS_BASE_PATH / {default_subdir}
 PLATFORM_CONFIG = {
     "confluence": {
         "skills_path_env": "CONFLUENCE_SKILLS_PATH",
-        "default_skills_path": "/Users/jasonkrueger/IdeaProjects/Confluence-Assistant-Skills",
+        "default_subdir": "Confluence-Assistant-Skills",
         "plugin_name": "confluence-assistant-skills",
         "lib_name": "confluence-as",
         "lib_package": "confluence_as",
@@ -42,7 +48,7 @@ PLATFORM_CONFIG = {
     },
     "jira": {
         "skills_path_env": "JIRA_SKILLS_PATH",
-        "default_skills_path": "/Users/jasonkrueger/IdeaProjects/Jira-Assistant-Skills",
+        "default_subdir": "Jira-Assistant-Skills",
         "plugin_name": "jira-assistant-skills",
         "lib_name": "jira-as",
         "lib_package": "jira_as",
@@ -52,7 +58,7 @@ PLATFORM_CONFIG = {
     },
     "splunk": {
         "skills_path_env": "SPLUNK_SKILLS_PATH",
-        "default_skills_path": "/Users/jasonkrueger/IdeaProjects/Splunk-Assistant-Skills",
+        "default_subdir": "Splunk-Assistant-Skills",
         "plugin_name": "splunk-assistant-skills",
         "lib_name": "splunk-as",
         "lib_package": "splunk_as",
@@ -67,14 +73,22 @@ CROSS_PLATFORM_REQUIRED = ["confluence", "jira", "splunk"]
 
 
 def get_skills_path(platform: str) -> Path:
-    """Get the skills repository path for a platform."""
+    """Get the skills repository path for a platform.
+
+    Resolution order:
+    1. {PLATFORM}_SKILLS_PATH env var (e.g., CONFLUENCE_SKILLS_PATH)
+    2. SKILLS_BASE_PATH / {default_subdir}
+    3. {as-demo parent} / {default_subdir}
+    """
     config = PLATFORM_CONFIG.get(platform)
     if not config:
         raise ValueError(f"Unknown platform: {platform}")
 
     env_var = config["skills_path_env"]
-    default = config["default_skills_path"]
-    return Path(os.environ.get(env_var, default))
+    if env_var in os.environ:
+        return Path(os.environ[env_var])
+
+    return SKILLS_BASE_PATH / config["default_subdir"]
 
 
 def get_required_platforms(platform: str) -> list[str]:
