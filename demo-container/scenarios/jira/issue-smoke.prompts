@@ -1,0 +1,17 @@
+---
+prompt: "Create a bug in project DEMO titled 'Test issue from mock mode'"
+expect:
+  tools:
+    must_call: []
+  text:
+    must_contain: []
+  semantic: "Should attempt to create a JIRA issue or explain how to create one"
+
+---
+prompt: "List all issues in project DEMO"
+expect:
+  tools:
+    must_call: []
+  text:
+    must_contain: []
+  semantic: "Should search for or list JIRA issues in the DEMO project"
