@@ -210,6 +210,21 @@ def run_skill_test(
     install_cmd = "; ".join(lib_installs)
     symlink_cmd = "; ".join(symlink_cmds)
 
+    # Register local plugins in installed_plugins.json so Claude sees them
+    register_cmds = []
+    installed_plugins_file = "/home/devuser/.claude/plugins/installed_plugins.json"
+    for p in required_platforms:
+        config = PLATFORM_CONFIG[p]
+        plugin_key = f"{config['plugin_name']}@local-dev"
+        install_path = f"/home/devuser/.claude/plugins/cache/{config['plugin_name']}/{config['plugin_name']}/dev"
+        # Use jq to add/update the plugin entry
+        register_cmds.append(
+            f"jq '.plugins[\"{plugin_key}\"] = [{{\"scope\":\"user\",\"installPath\":\"{install_path}\",\"version\":\"dev\"}}]' "
+            f"{installed_plugins_file} > /tmp/plugins.json && "
+            f"mv /tmp/plugins.json {installed_plugins_file}"
+        )
+    register_cmd = "; ".join(register_cmds)
+
     # Determine scenario path
     if platform in ("cross-platform", "all"):
         scenario_path = f"/workspace/scenarios/cross-platform/{scenario}.prompts"
@@ -219,6 +234,7 @@ def run_skill_test(
     inner_cmd = (
         f"{install_cmd}; "
         f"{symlink_cmd}; "
+        f"{register_cmd}; "
         "mkdir -p /tmp/checkpoints; "
         f"python /workspace/skill-test.py {scenario_path} "
         f"--model {model} --judge-model {judge_model}"
