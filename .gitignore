@@ -52,3 +52,6 @@ dump.rdb
 __pycache__/
 *.pyc
 *.pyo
+
+# Playwright
+.playwright-mcp/
