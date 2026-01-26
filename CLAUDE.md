@@ -166,6 +166,42 @@ make reset-jira
 | Change Management | JIRA → Confluence → Splunk | cross-platform/change-management.prompts |
 | Knowledge Sync | JIRA → Confluence | cross-platform/knowledge-sync.prompts |
 
+## How Claude Code Skills Work
+
+### The Skill → Bash Pattern
+Skills in Claude Code plugins are **documentation, not code execution**. When a user invokes a skill:
+
+1. Claude reads the skill file (markdown with YAML frontmatter)
+2. Claude loads context about what the skill does
+3. Claude executes appropriate tools (usually Bash) based on that context
+
+**Key insight**: Skills don't execute directly—they provide context that guides Claude's tool usage.
+
+### Expected Tool Sequences
+
+| Skill Type | Tool Sequence |
+|------------|---------------|
+| Platform action | Skill → Read context → Bash (make/API call) |
+| Testing | Skill → Bash (make test-skill-dev) |
+| Deployment | Skill → Bash (ssh + docker commands) |
+| Status check | Skill → Bash (curl health endpoints) |
+
+### Skill Files Location
+
+| Platform | Location |
+|----------|----------|
+| Confluence | `~/.claude/plugins/confluence-assistant-skills/` |
+| JIRA | `~/.claude/plugins/jira-assistant-skills/` |
+| Splunk | `~/.claude/plugins/splunk-assistant-skills/` |
+| AS-Demo | `.claude/` (local plugin in this repo) |
+
+### Test Expectations
+When testing skills, expect tool call sequences, not direct skill execution:
+- Correct: `Skill → Bash → output`
+- Incorrect: `Skill → direct output`
+
+The skill provides Claude with instructions; Claude then uses the appropriate tools to accomplish the task described in those instructions.
+
 ## Configuration
 
 ### Environment Variables (`secrets/.env`)
@@ -381,6 +417,55 @@ docker logs as-demo-queue 2>&1 | grep ttyd
 docker exec as-demo-queue docker run --rm -e TERM=xterm as-demo-container:latest echo test
 ```
 
+## Mock Mode Debugging
+
+Mock mode allows testing skill behavior without connecting to real APIs. Each platform can be configured independently.
+
+### Enabling Mock Mode
+
+Set environment variables before running tests:
+
+```bash
+# Enable per-platform
+export CONFLUENCE_MOCK_MODE=true
+export JIRA_MOCK_MODE=true
+export SPLUNK_MOCK_MODE=true
+```
+
+### Verification Workflow
+
+1. Check environment: `echo $CONFLUENCE_MOCK_MODE` (should be `true`)
+2. Check state file: `cat /tmp/mock_state_confluence.json`
+3. Check import hooks: `python -c "import sitecustomize; print('OK')"`
+4. Run minimal test: `python -c "from confluence_as.client import get_confluence_client; c = get_confluence_client(); print(c)"`
+5. Check logs for mock activation messages
+6. Verify PYTHONPATH includes `/workspace/patches`
+
+### Common Error Patterns
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `ConnectionError` to real API | Mock not activated | Check `*_MOCK_MODE=true` |
+| `FileNotFoundError` state | State file missing | Run seed or create empty `{}` |
+| `ImportError` sitecustomize | PYTHONPATH wrong | Add `/workspace/patches` |
+| `AttributeError` on mock | Mock API incomplete | Update mock client |
+| Stale data in responses | Old state file | Delete `/tmp/mock_state_*.json` |
+
+### State File Locations
+
+| Platform | State File |
+|----------|------------|
+| Confluence | `/tmp/mock_state_confluence.json` |
+| JIRA | `/tmp/mock_state_jira.json` |
+| Splunk | `/tmp/mock_state_splunk.json` |
+
+### Debugging Tips
+
+- Mock state persists between test runs—delete state files for clean slate
+- Mock mode doesn't load seed data automatically; run seed scripts first
+- Mock clients may lag behind real API changes—check for missing methods
+- Use `--verbose` flag with skill tests to see mock activation logs
+
 ## Adding New Cross-Platform Scenarios
 
 1. Create scenario files:
@@ -569,3 +654,117 @@ apt-get update && apt-get install -y docker-compose-plugin
 - Local secrets can be retrieved with `secret-get <KEY>` command
 - Available: `CLAUDE_CODE_OAUTH_TOKEN`, `CONFLUENCE_API_TOKEN`, etc.
 - Never commit actual secrets to git
+
+### OAuth & Authentication
+
+**OAuth Token Sourcing**
+- Claude Code sources tokens from `~/.claude.json` or environment variables
+- Container sessions use tokens passed via `--env-file`
+- Token source order: env var → config file → prompt for login
+
+**Token Expiration**
+- OAuth tokens expire periodically
+- **Symptom**: Skill tests fail with authentication errors
+- **Fix**: Run `/refresh-token` (local) or `/refresh-prod-token` (production)
+
+**Multi-Platform Token Management**
+- Each platform (Confluence, JIRA, Splunk) requires separate credentials
+- Confluence/JIRA use Atlassian API tokens with email
+- Splunk uses username/password or HEC token
+- Verify all required tokens are set before running cross-platform scenarios
+
+### Testing & CLI
+
+**Test CLI Directly First**
+- Always test with `python skill-test.py` before testing in Docker
+- This isolates environment issues from skill logic issues
+- Docker adds layers of complexity (volumes, permissions, networking)
+
+**Prompts Run Independently**
+- Each prompt in a `.prompts` file starts with fresh Claude context
+- State from previous prompts is NOT preserved
+- Design prompts to be self-contained
+
+**Conversation Context Reuse**
+- Use `--fork-from <prompt_number>` to continue from specific prompt's context
+- Useful for multi-step scenarios that build on previous responses
+- Example: `make test-skill PLATFORM=jira SCENARIO=issue FORK_FROM=2`
+
+**Semantic vs Exact Match Evaluation**
+- LLM judge evaluates intent, not exact output match
+- "Created issue ABC-123" matches expectation "should create an issue"
+- Adjust expectations for semantic evaluation
+
+**Test Result Variability**
+- Same prompt may produce different tool sequences across runs
+- LLM responses are non-deterministic by nature
+- Write expectations that tolerate variation
+
+**Tool Expectation Patterns**
+- Expect `Skill → Bash` sequence, not direct skill execution
+- Skills provide context; Claude executes tools based on that context
+- Verify the right tools are called, not specific output text
+
+**Skill Routing Failures**
+- **Symptom**: Skill isn't triggered when invoked
+- **Cause**: `plugin.json` globs don't match skill file path
+- **Fix**: Check glob patterns in `plugin.json` against actual file locations
+
+### Mock Mode
+
+**Mock Mode Activation**
+- Set `{PLATFORM}_MOCK_MODE=true` environment variable
+- Must be set before Python interpreter starts
+- Container must have mock patches in PYTHONPATH
+
+**Mock State Persistence**
+- State persists in `/tmp/mock_state_{platform}.json`
+- Delete state files for clean test runs
+- State accumulates across test runs within same container
+
+**Mock vs Real API Errors**
+- Mock mode errors differ from actual API errors
+- Test both modes for complete coverage
+- Mock doesn't simulate rate limits or network latency
+
+**Seed Data in Mock Mode**
+- Mock mode doesn't load seed data by default
+- Run seed scripts to populate mock state
+- Or create `/tmp/mock_state_{platform}.json` with expected data
+
+**Mock Client API Parity**
+- Mock clients may lag behind real API changes
+- Check for missing methods when mock tests fail
+- Update mock implementations when adding new API features
+
+### Telemetry & Observability
+
+**OTEL Traces Flush Delay**
+- Traces may take 10-30 seconds to appear in Tempo
+- Don't expect immediate trace visibility after test completion
+- Use `sleep 30` before querying traces in automated tests
+
+**Tempo Port for Local Queries**
+- Tempo needs port 3200 exposed for local trace queries
+- Default LGTM stack exposes this via the lgtm container
+- Query: `curl http://localhost:3200/api/traces/{traceId}`
+
+**Skill Test Telemetry**
+- Set `OTEL_EXPORTER_OTLP_ENDPOINT` for trace capture
+- Default: `http://lgtm:4318` inside Docker network
+- Local: `http://localhost:4318` when running outside Docker
+
+**Grafana Dashboard Reload**
+- Dashboards need refresh after provisioning config changes
+- Use Grafana API or restart container: `docker compose restart lgtm`
+- Check `/var/lib/grafana/dashboards/` for provisioned files
+
+**Loki Query for Stat Panels**
+- Use `sum(count_over_time(...))` not raw log queries
+- Stat panels expect single numeric values
+- Example: `sum(count_over_time({job="demo"} |= "error" [1h]))`
+
+**High Cardinality Label Warning**
+- Avoid high-cardinality labels in custom metrics
+- Labels like `user_id`, `session_id`, `trace_id` cause storage issues
+- Use log lines for high-cardinality data, metrics for aggregates
