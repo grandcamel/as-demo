@@ -8,8 +8,9 @@
 	validate validate-compose validate-health validate-integration validate-scenarios \
 	validate-env validate-security validate-load validate-deps validate-drift \
 	validate-container-security validate-images validate-secrets validate-ports \
-	validate-volumes \
-	deploy deploy-setup deploy-ssl deploy-update ssl-renew health-prod deploy-status
+	validate-volumes validate-platform \
+	deploy deploy-setup deploy-ssl deploy-update ssl-renew health-prod deploy-status \
+	test-skill-dev refine-skill test-skill-mock list-scenarios
 
 # Default target
 help:
@@ -41,6 +42,13 @@ help:
 	@echo "  make test-splunk     Test Splunk scenarios"
 	@echo "  make test-cross      Test cross-platform scenarios"
 	@echo "  make test-all        Run all tests"
+	@echo ""
+	@echo "Skill Development:"
+	@echo "  make test-skill-dev  Run skill test with verbose output"
+	@echo "  make refine-skill    Run skill refinement loop"
+	@echo "  make test-skill-mock Run skill test in mock mode"
+	@echo "  make list-scenarios  List available scenarios"
+	@echo "  (Use PLATFORM=confluence|jira|splunk|cross-platform SCENARIO=name)"
 	@echo ""
 	@echo "Validation:"
 	@echo "  make validate        Run all validations"
@@ -227,6 +235,74 @@ test-all:
 	$(MAKE) test-jira SCENARIO=issue
 	$(MAKE) test-splunk SCENARIO=sre
 	$(MAKE) test-cross SCENARIO=incident-response
+
+# =============================================================================
+# Skill Development Testing
+# =============================================================================
+
+# Default values for skill testing
+PLATFORM ?= confluence
+SCENARIO ?= page
+MODEL ?= sonnet
+JUDGE_MODEL ?= haiku
+MAX_ATTEMPTS ?= 3
+
+# Run skill test with verbose output (for development)
+# Usage: make test-skill-dev PLATFORM=jira SCENARIO=issue
+test-skill-dev:
+	@echo "Running skill test (dev mode): $(PLATFORM)/$(SCENARIO)"
+	python demo-container/skill-refine-loop.py \
+		--scenario $(SCENARIO) \
+		--platform $(PLATFORM) \
+		--max-attempts 1 \
+		--model $(MODEL) \
+		--judge-model $(JUDGE_MODEL) \
+		--verbose
+
+# Run skill refinement loop (iterative fix cycle)
+# Usage: make refine-skill PLATFORM=confluence SCENARIO=page MAX_ATTEMPTS=5
+refine-skill:
+	@echo "Running skill refinement loop: $(PLATFORM)/$(SCENARIO)"
+	python demo-container/skill-refine-loop.py \
+		--scenario $(SCENARIO) \
+		--platform $(PLATFORM) \
+		--max-attempts $(MAX_ATTEMPTS) \
+		--model $(MODEL) \
+		--judge-model $(JUDGE_MODEL) \
+		--verbose
+
+# Run skill test with mock mode (no real API calls)
+# Usage: make test-skill-mock PLATFORM=jira SCENARIO=issue
+test-skill-mock:
+	@echo "Running skill test (mock mode): $(PLATFORM)/$(SCENARIO)"
+	python demo-container/skill-refine-loop.py \
+		--scenario $(SCENARIO) \
+		--platform $(PLATFORM) \
+		--max-attempts 1 \
+		--model $(MODEL) \
+		--judge-model $(JUDGE_MODEL) \
+		--mock \
+		--verbose
+
+# List all available scenarios by platform
+list-scenarios:
+	@echo "Available scenarios:"
+	@echo ""
+	@echo "Confluence:"
+	@ls -1 demo-container/scenarios/confluence/*.md 2>/dev/null | xargs -n1 basename | sed 's/.md//'
+	@echo ""
+	@echo "JIRA:"
+	@ls -1 demo-container/scenarios/jira/*.md 2>/dev/null | xargs -n1 basename | sed 's/.md//'
+	@echo ""
+	@echo "Splunk:"
+	@ls -1 demo-container/scenarios/splunk/*.md 2>/dev/null | xargs -n1 basename | sed 's/.md//'
+	@echo ""
+	@echo "Cross-platform (with .prompts files):"
+	@ls -1 demo-container/scenarios/cross-platform/*.prompts 2>/dev/null | xargs -n1 basename | sed 's/.prompts//'
+
+# Validate platform configuration
+validate-platform:
+	@python scripts/docker_runner.py --platform $(PLATFORM) --validate
 
 # =============================================================================
 # Linting
