@@ -281,8 +281,8 @@ test-all:
 # Default values for skill testing
 PLATFORM ?= confluence
 SCENARIO ?= page
-MODEL ?= sonnet
-JUDGE_MODEL ?= haiku
+MODEL ?= opus
+JUDGE_MODEL ?= opus
 MAX_ATTEMPTS ?= 3
 MOCK ?=
 

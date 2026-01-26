@@ -106,8 +106,8 @@ def get_required_platforms(platform: str) -> list[str]:
 def run_skill_test(
     scenario: str,
     platform: str,
-    model: str = "sonnet",
-    judge_model: str = "haiku",
+    model: str = "opus",
+    judge_model: str = "opus",
     prompt_index: int | None = None,
     fix_context: bool = False,
     verbose: bool = False,
@@ -151,13 +151,24 @@ def run_skill_test(
         config = PLATFORM_CONFIG[p]
         skills_path = get_skills_path(p)
 
-        # Find plugin path
+        # Find plugin path - check multiple possible locations:
+        # 1. skills_path/plugins/{plugin_name}
+        # 2. skills_path/{plugin_name}
+        # 3. skills_path itself (if it has .claude-plugin/ or skills/)
         plugin_path = skills_path / "plugins" / config["plugin_name"]
         if not plugin_path.exists():
             plugin_path = skills_path / config["plugin_name"]
+        if not plugin_path.exists():
+            # Check if skills_path root is the plugin itself
+            if (skills_path / ".claude-plugin").exists() or (skills_path / "skills").exists():
+                plugin_path = skills_path
 
-        # Library path
+        # Library path - check multiple possible locations:
+        # 1. skills_path/{lib_name}
+        # 2. Sibling directory: skills_path/../{lib_name}
         lib_path = skills_path / config["lib_name"]
+        if not lib_path.exists():
+            lib_path = skills_path.parent / config["lib_name"]
 
         if plugin_path.exists():
             cmd.extend([
@@ -172,6 +183,10 @@ def run_skill_test(
     checkpoint_dir = Path("/tmp/checkpoints")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     cmd.extend(["-v", "/tmp/checkpoints:/tmp/checkpoints"])
+
+    # Mount scenarios directory for runtime modification
+    scenarios_dir = AS_DEMO_PATH / "demo-container" / "scenarios"
+    cmd.extend(["-v", f"{scenarios_dir}:/workspace/scenarios:ro"])
 
     # Add entrypoint and image
     cmd.extend([
@@ -423,7 +438,7 @@ After making changes, provide a brief summary of what you changed and why.
     cmd = [
         "claude",
         "-p", prompt,
-        "--model", "sonnet",
+        "--model", "opus",
         "--dangerously-skip-permissions",
         "--output-format", "json",
     ]
@@ -472,8 +487,8 @@ def run_refinement_loop(
     scenario: str,
     platform: str,
     max_attempts: int = 3,
-    model: str = "sonnet",
-    judge_model: str = "haiku",
+    model: str = "opus",
+    judge_model: str = "opus",
     verbose: bool = False,
     mock_mode: bool = False,
 ) -> bool:
@@ -622,8 +637,8 @@ Examples:
     )
     parser.add_argument("--max-attempts", type=int, default=3,
                         help="Maximum fix attempts before giving up (default: 3)")
-    parser.add_argument("--model", default="sonnet", help="Model for running prompts (default: sonnet)")
-    parser.add_argument("--judge-model", default="haiku", help="Model for LLM judge (default: haiku)")
+    parser.add_argument("--model", default="opus", help="Model for running prompts (default: opus)")
+    parser.add_argument("--judge-model", default="opus", help="Model for LLM judge (default: opus)")
     parser.add_argument("--mock", action="store_true", help="Enable mock mode for testing")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     args = parser.parse_args()
@@ -634,13 +649,21 @@ Examples:
         skills_path = get_skills_path(platform)
         config = PLATFORM_CONFIG[platform]
 
+        # Check multiple possible plugin locations
         plugin_path = skills_path / "plugins" / config["plugin_name"]
         if not plugin_path.exists():
             plugin_path = skills_path / config["plugin_name"]
+        if not plugin_path.exists():
+            # Check if skills_path root is the plugin itself
+            if (skills_path / ".claude-plugin").exists() or (skills_path / "skills").exists():
+                plugin_path = skills_path
 
         if not plugin_path.exists():
             print(f"Error: {platform.title()} plugin not found at {skills_path}")
-            print(f"  Expected: {skills_path}/plugins/{config['plugin_name']} or {skills_path}/{config['plugin_name']}")
+            print(f"  Expected one of:")
+            print(f"    - {skills_path}/plugins/{config['plugin_name']}")
+            print(f"    - {skills_path}/{config['plugin_name']}")
+            print(f"    - {skills_path}/ (with .claude-plugin/ or skills/)")
             sys.exit(1)
 
     # Check environment for required platforms
