@@ -121,6 +121,25 @@ SPLUNK_HEC_TOKEN=demo-hec-token
 DOMAIN=demo.assistant-skills.dev
 ```
 
+### Skills Path Configuration
+
+The `refine-skill` command locates platform skills repositories using these environment variables:
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `SKILLS_BASE_PATH` | Base directory for all skills repos | Parent of as-demo directory |
+| `CONFLUENCE_SKILLS_PATH` | Confluence skills repo | `{base}/Confluence-Assistant-Skills` |
+| `JIRA_SKILLS_PATH` | JIRA skills repo | `{base}/Jira-Assistant-Skills` |
+| `SPLUNK_SKILLS_PATH` | Splunk skills repo | `{base}/Splunk-Assistant-Skills` |
+
+```bash
+# Override base path for all platforms
+SKILLS_BASE_PATH=/opt/skills make refine-skill PLATFORM=jira SCENARIO=issue
+
+# Override single platform
+CONFLUENCE_SKILLS_PATH=/home/user/my-confluence make refine-skill PLATFORM=confluence SCENARIO=page
+```
+
 ### Claude Authentication
 
 **macOS Keychain** (recommended):
@@ -187,15 +206,16 @@ make reset-confluence     # Reset Confluence sandbox
 make reset-jira           # Reset JIRA sandbox
 
 # Invite Management
-make invite               # Generate invite (default 48h)
-make invite EXPIRES=7d    # Custom expiration
-make invite-local         # Generate for local dev
-make invite-list          # List all invites
-make invite-revoke TOKEN=abc123
+make invite               # Generate invite (default 24h)
+make invite EXPIRES=168   # 1 week (hours)
+make invite LABEL="Demo"  # Custom label
+make invite-list          # List all active invites
 
-# Interactive Shell
-make shell-demo           # Interactive demo container
-make shell-demo PROMPT="..." MODEL=sonnet
+# Skill Development
+make test-skill-dev PLATFORM=jira SCENARIO=issue    # Test with verbose output
+make refine-skill PLATFORM=confluence SCENARIO=page # Iterative test-fix loop
+make refine-skill PLATFORM=jira SCENARIO=issue MOCK=true  # Mock mode (no API calls)
+make list-scenarios       # List all available scenarios
 ```
 
 ## Platform Scenarios
