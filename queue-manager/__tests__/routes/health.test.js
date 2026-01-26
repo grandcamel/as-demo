@@ -5,6 +5,7 @@
 describe('health routes', () => {
   let health;
   let mockApp;
+  let mockRedis;
   let state;
   let config;
   let registeredRoutes;
@@ -41,12 +42,25 @@ describe('health routes', () => {
       })
     };
 
-    health.register(mockApp);
+    // Mock Redis client
+    mockRedis = {
+      ping: jest.fn().mockResolvedValue('PONG')
+    };
+
+    health.register(mockApp, mockRedis);
   });
 
   describe('register', () => {
     it('should register /api/health route', () => {
       expect(mockApp.get).toHaveBeenCalledWith('/api/health', expect.any(Function));
+    });
+
+    it('should register /api/health/live route', () => {
+      expect(mockApp.get).toHaveBeenCalledWith('/api/health/live', expect.any(Function));
+    });
+
+    it('should register /api/health/ready route', () => {
+      expect(mockApp.get).toHaveBeenCalledWith('/api/health/ready', expect.any(Function));
     });
 
     it('should register /api/status route', () => {
@@ -67,26 +81,77 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/health'];
       mockReq = {};
       mockRes = {
+        set: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
         json: jest.fn()
       };
     });
 
-    it('should return health status', () => {
-      handler(mockReq, mockRes);
+    it('should return health status when redis is healthy', async () => {
+      mockRedis.ping.mockResolvedValue('PONG');
 
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.set).toHaveBeenCalledWith('Cache-Control', 'no-cache, no-store, must-revalidate');
+      expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         status: 'ok',
         timestamp: expect.any(String),
         enabled_platforms: ['confluence', 'jira', 'splunk'],
-        configured_platforms: ['confluence', 'jira']
+        configured_platforms: ['confluence', 'jira'],
+        dependencies: {
+          redis: 'healthy'
+        }
       });
     });
 
-    it('should return ISO timestamp', () => {
-      handler(mockReq, mockRes);
+    it('should return error status when redis is unhealthy', async () => {
+      mockRedis.ping.mockRejectedValue(new Error('Connection refused'));
+
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(503);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        status: 'error',
+        timestamp: expect.any(String),
+        enabled_platforms: ['confluence', 'jira', 'splunk'],
+        configured_platforms: ['confluence', 'jira'],
+        dependencies: {
+          redis: 'unhealthy'
+        }
+      });
+    });
+
+    it('should return ISO timestamp', async () => {
+      await handler(mockReq, mockRes);
 
       const response = mockRes.json.mock.calls[0][0];
       expect(() => new Date(response.timestamp)).not.toThrow();
+    });
+  });
+
+  describe('GET /api/health/live', () => {
+    let handler;
+    let mockReq;
+    let mockRes;
+
+    beforeEach(() => {
+      handler = registeredRoutes['/api/health/live'];
+      mockReq = {};
+      mockRes = {
+        set: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+    });
+
+    it('should return liveness status', () => {
+      handler(mockReq, mockRes);
+
+      expect(mockRes.set).toHaveBeenCalledWith('Cache-Control', 'no-cache, no-store, must-revalidate');
+      expect(mockRes.json).toHaveBeenCalledWith({
+        status: 'ok',
+        timestamp: expect.any(String)
+      });
     });
   });
 
