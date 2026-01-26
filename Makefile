@@ -10,7 +10,9 @@
 	validate-container-security validate-images validate-secrets validate-ports \
 	validate-volumes validate-platform \
 	deploy deploy-setup deploy-ssl deploy-update ssl-renew health-prod deploy-status \
-	test-skill-dev refine-skill test-skill-mock list-scenarios
+	test-skill-dev refine-skill test-skill-mock list-scenarios \
+	start-local stop-local restart-local status-local health-local \
+	queue-status-local queue-reset-local logs-errors-local traces-errors-local
 
 # Default target
 help:
@@ -102,6 +104,42 @@ dev-full: network
 # Stop all services
 down:
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile full down
+
+# =============================================================================
+# Local Development Aliases (for slash commands)
+# =============================================================================
+
+# Aliases for consistent naming
+start-local: dev
+stop-local: down
+
+restart-local:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml restart
+
+status-local:
+	@docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
+	@echo ""
+	@echo "Health:"
+	@curl -sf http://localhost:8080/api/health | jq . 2>/dev/null || echo "Queue manager not responding"
+
+health-local:
+	@echo "Checking local health..."
+	@echo -n "Landing page: " && (curl -sf http://localhost:8080/health > /dev/null && echo "OK" || echo "FAILED")
+	@echo -n "Queue manager: " && (curl -sf http://localhost:8080/api/status > /dev/null && echo "OK" || echo "FAILED")
+	@echo -n "Queue status: " && curl -s http://localhost:8080/api/status | jq -c
+
+queue-status-local:
+	@curl -s http://localhost:8080/api/status | jq .
+
+queue-reset-local:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml restart queue-manager
+	@echo "Queue manager restarted. Active sessions disconnected."
+
+logs-errors-local:
+	@docker compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=100 2>&1 | grep -iE 'error|failed|exception' || echo "No errors found"
+
+traces-errors-local:
+	@curl -s "http://localhost:3200/api/search" --data-urlencode "q={status=error}" --data-urlencode "limit=20" | jq . 2>/dev/null || echo "Tempo not responding"
 
 # =============================================================================
 # Production
