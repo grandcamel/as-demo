@@ -42,12 +42,15 @@ export default defineConfig({
 
         // Services with tests
         'services/state.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'services/invite.js': { lines: 100, functions: 100, branches: 95, statements: 100 },
+        'services/queue.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'services/session.js': { lines: 90, functions: 100, branches: 90, statements: 90 },
 
         // Error handling module
         'errors/index.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
 
         // Note: Global thresholds not set due to untested integration files
-        // (instrumentation.js, server.js, lib/index.js, lib/metrics.js, services/invite|queue|session.js)
+        // (instrumentation.js, server.js, lib/index.js, lib/metrics.js, config/index.js)
         // Add integration tests for these before enabling global thresholds
       },
     },
