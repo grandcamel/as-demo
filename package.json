@@ -12,8 +12,8 @@
     "logs": "docker compose logs -f",
     "lint": "npm run lint --prefix queue-manager",
     "lint:fix": "npm run lint:fix --prefix queue-manager",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "npx prettier --write .",
+    "format:check": "npx prettier --check .",
     "test": "npm run test --prefix queue-manager",
     "test:coverage": "npm run test:coverage --prefix queue-manager"
   },
