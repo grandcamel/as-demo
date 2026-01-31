@@ -2,25 +2,57 @@
  * Tests for lib/env-file.js
  *
  * Tests environment file management with fs mocking.
+ *
+ * Note: Since the source file uses CommonJS require('fs'), we need to
+ * use vi.mock with the proper structure and hoist the mock functions
+ * so they can be referenced within the mock factory.
  */
 
-const fs = require('fs');
-const path = require('path');
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import path from 'path';
+import { createRequire } from 'module';
 
-jest.mock('fs');
+// Create CommonJS require for importing the module under test
+const require = createRequire(import.meta.url);
 
-const {
-  createSessionEnvFile,
-  createEnvFileManager
-} = require('../../lib/env-file');
+// Create mock functions
+const mockFs = {
+  mkdirSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  unlinkSync: vi.fn()
+};
 
 describe('env-file', () => {
+  let createSessionEnvFile;
+  let createEnvFileManager;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+
     // Default mock implementations
-    fs.mkdirSync.mockImplementation(() => {});
-    fs.writeFileSync.mockImplementation(() => {});
-    fs.unlinkSync.mockImplementation(() => {});
+    mockFs.mkdirSync.mockImplementation(() => {});
+    mockFs.writeFileSync.mockImplementation(() => {});
+    mockFs.unlinkSync.mockImplementation(() => {});
+
+    // Clear require cache to get fresh module state
+    const modulePath = require.resolve('../../lib/env-file');
+    const fsPath = require.resolve('fs');
+
+    // Delete cached modules
+    delete require.cache[modulePath];
+
+    // Replace fs in require.cache with our mock
+    require.cache[fsPath] = {
+      id: fsPath,
+      filename: fsPath,
+      loaded: true,
+      exports: mockFs
+    };
+
+    // Now require the module - it will use our mocked fs
+    const envFileModule = require('../../lib/env-file');
+    createSessionEnvFile = envFileModule.createSessionEnvFile;
+    createEnvFileManager = envFileModule.createEnvFileManager;
   });
 
   describe('createSessionEnvFile', () => {
@@ -103,7 +135,7 @@ describe('env-file', () => {
       it('should create directory with recursive option', () => {
         createSessionEnvFile(validOptions);
 
-        expect(fs.mkdirSync).toHaveBeenCalledWith(
+        expect(mockFs.mkdirSync).toHaveBeenCalledWith(
           validOptions.containerPath,
           { recursive: true }
         );
@@ -112,7 +144,7 @@ describe('env-file', () => {
       it('should ignore EEXIST error', () => {
         const error = new Error('Directory exists');
         error.code = 'EEXIST';
-        fs.mkdirSync.mockImplementation(() => { throw error; });
+        mockFs.mkdirSync.mockImplementation(() => { throw error; });
 
         expect(() => createSessionEnvFile(validOptions)).not.toThrow();
       });
@@ -120,7 +152,7 @@ describe('env-file', () => {
       it('should throw other mkdir errors', () => {
         const error = new Error('Permission denied');
         error.code = 'EACCES';
-        fs.mkdirSync.mockImplementation(() => { throw error; });
+        mockFs.mkdirSync.mockImplementation(() => { throw error; });
 
         expect(() => createSessionEnvFile(validOptions))
           .toThrow('Failed to create env directory: Permission denied');
@@ -136,7 +168,7 @@ describe('env-file', () => {
           `session-${validOptions.sessionId}.env`
         );
 
-        expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect(mockFs.writeFileSync).toHaveBeenCalledWith(
           expectedPath,
           expect.any(String),
           { mode: 0o600 }
@@ -146,7 +178,7 @@ describe('env-file', () => {
       it('should write credentials as KEY=value format', () => {
         createSessionEnvFile(validOptions);
 
-        const writtenContent = fs.writeFileSync.mock.calls[0][1];
+        const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
 
         expect(writtenContent).toContain('API_TOKEN=secret-token');
         expect(writtenContent).toContain('API_EMAIL=user@example.com');
@@ -164,7 +196,7 @@ describe('env-file', () => {
           }
         });
 
-        const writtenContent = fs.writeFileSync.mock.calls[0][1];
+        const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
 
         expect(writtenContent).toContain('KEEP=value');
         expect(writtenContent).not.toContain('EMPTY=');
@@ -175,13 +207,13 @@ describe('env-file', () => {
       it('should set file mode to 0600', () => {
         createSessionEnvFile(validOptions);
 
-        const options = fs.writeFileSync.mock.calls[0][2];
+        const options = mockFs.writeFileSync.mock.calls[0][2];
 
         expect(options.mode).toBe(0o600);
       });
 
       it('should throw on write error', () => {
-        fs.writeFileSync.mockImplementation(() => {
+        mockFs.writeFileSync.mockImplementation(() => {
           throw new Error('Disk full');
         });
 
@@ -220,7 +252,7 @@ describe('env-file', () => {
 
         result.cleanup();
 
-        expect(fs.unlinkSync).toHaveBeenCalledWith(result.containerPath);
+        expect(mockFs.unlinkSync).toHaveBeenCalledWith(result.containerPath);
       });
 
       it('should ignore ENOENT error (file already deleted)', () => {
@@ -228,18 +260,18 @@ describe('env-file', () => {
 
         const error = new Error('File not found');
         error.code = 'ENOENT';
-        fs.unlinkSync.mockImplementation(() => { throw error; });
+        mockFs.unlinkSync.mockImplementation(() => { throw error; });
 
         expect(() => result.cleanup()).not.toThrow();
       });
 
       it('should log other unlink errors', () => {
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         const result = createSessionEnvFile(validOptions);
 
         const error = new Error('Permission denied');
         error.code = 'EACCES';
-        fs.unlinkSync.mockImplementation(() => { throw error; });
+        mockFs.unlinkSync.mockImplementation(() => { throw error; });
 
         result.cleanup();
 
@@ -258,7 +290,7 @@ describe('env-file', () => {
           credentials: {}
         });
 
-        const writtenContent = fs.writeFileSync.mock.calls[0][1];
+        const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
         expect(writtenContent).toBe('\n');
         expect(result.containerPath).toBeDefined();
       });
@@ -272,7 +304,7 @@ describe('env-file', () => {
           }
         });
 
-        const writtenContent = fs.writeFileSync.mock.calls[0][1];
+        const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
 
         expect(writtenContent).toContain('TOKEN=value=with=equals');
         expect(writtenContent).toContain('COMPLEX=has spaces and $pecial');
@@ -307,18 +339,18 @@ describe('env-file', () => {
       it('should create directory on initialization', () => {
         createEnvFileManager(validManagerOptions);
 
-        expect(fs.mkdirSync).toHaveBeenCalledWith(
+        expect(mockFs.mkdirSync).toHaveBeenCalledWith(
           validManagerOptions.containerPath,
           { recursive: true }
         );
       });
 
       it('should log warning on mkdir error (non-EEXIST)', () => {
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const error = new Error('Permission denied');
         error.code = 'EACCES';
-        fs.mkdirSync.mockImplementation(() => { throw error; });
+        mockFs.mkdirSync.mockImplementation(() => { throw error; });
 
         createEnvFileManager(validManagerOptions);
 
@@ -343,7 +375,7 @@ describe('env-file', () => {
     describe('create', () => {
       it('should create env file for session', () => {
         const manager = createEnvFileManager(validManagerOptions);
-        fs.mkdirSync.mockClear();
+        mockFs.mkdirSync.mockClear();
 
         const envFile = manager.create('session-123', { TOKEN: 'secret' });
 
@@ -370,7 +402,7 @@ describe('env-file', () => {
         manager.create('session-123', { TOKEN: 'new' });
 
         // unlink should be called for the old file
-        expect(fs.unlinkSync).toHaveBeenCalled();
+        expect(mockFs.unlinkSync).toHaveBeenCalled();
         expect(manager.size()).toBe(1);
       });
     });
@@ -407,7 +439,7 @@ describe('env-file', () => {
         manager.cleanupAll();
 
         expect(manager.size()).toBe(0);
-        expect(fs.unlinkSync).toHaveBeenCalledTimes(3);
+        expect(mockFs.unlinkSync).toHaveBeenCalledTimes(3);
       });
 
       it('should handle empty manager', () => {
