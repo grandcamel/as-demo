@@ -4,12 +4,18 @@
  * Tests state management functions.
  */
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 describe('state', () => {
   let state;
 
   beforeEach(() => {
     // Clear module cache to get fresh state
-    jest.resetModules();
+    const statePath = require.resolve('../../services/state');
+    delete require.cache[statePath];
     state = require('../../services/state');
   });
 
@@ -225,7 +231,7 @@ describe('state', () => {
 
       it('should allow storing client data', () => {
         const clientData = { id: 'client-1', state: 'idle' };
-        const ws = { send: jest.fn() };
+        const ws = { send: vi.fn() };
 
         state.clients.set(ws, clientData);
 

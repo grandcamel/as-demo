@@ -4,6 +4,11 @@
  * Tests WebSocket connection handling with mocked dependencies.
  */
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 describe('websocket handler', () => {
   let websocket;
   let mockWss;
@@ -14,77 +19,144 @@ describe('websocket handler', () => {
   let queue;
   let rateLimiterMock;
 
+  // Create shared mock state that persists across module reloads
+  let clients;
+  let queueArray;
+  let pendingSessionTokens;
+
+  // Mock functions for state module
+  let mockGetActiveSession;
+  let mockSetActiveSession;
+  let mockClearDisconnectGraceTimeout;
+  let mockSetDisconnectGraceTimeout;
+
   beforeEach(() => {
-    jest.resetModules();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Create fresh state for each test
-    const clients = new Map();
-    const queueArray = [];
-    const pendingSessionTokens = new Map();
+    clients = new Map();
+    queueArray = [];
+    pendingSessionTokens = new Map();
+
+    mockGetActiveSession = vi.fn(() => null);
+    mockSetActiveSession = vi.fn();
+    mockClearDisconnectGraceTimeout = vi.fn();
+    mockSetDisconnectGraceTimeout = vi.fn();
 
     rateLimiterMock = {
-      check: jest.fn(() => ({ allowed: true, remaining: 9 })),
-      cleanup: jest.fn()
+      check: vi.fn(() => ({ allowed: true, remaining: 9 })),
+      cleanup: vi.fn()
     };
 
-    jest.doMock('uuid', () => ({
-      v4: jest.fn(() => 'mock-client-id')
-    }));
+    // Clear require cache for all modules we're testing
+    const paths = [
+      '../../handlers/websocket',
+      '../../services/state',
+      '../../services/queue',
+      '../../services/session',
+      '../../config',
+      'uuid',
+      '@demo-platform/queue-manager-core'
+    ].map(p => {
+      try { return require.resolve(p); } catch { return null; }
+    }).filter(Boolean);
 
-    jest.doMock('@demo-platform/queue-manager-core', () => ({
-      createConnectionRateLimiter: jest.fn(() => rateLimiterMock)
-    }));
+    paths.forEach(p => delete require.cache[p]);
 
-    jest.doMock('../../config', () => ({
-      RATE_LIMIT_WINDOW_MS: 60000,
-      RATE_LIMIT_MAX_CONNECTIONS: 10,
-      ALLOWED_ORIGINS: ['http://localhost:8080'],
-      ENABLED_PLATFORMS: ['confluence', 'jira'],
-      DISCONNECT_GRACE_MS: 10000,
-      getConfiguredPlatforms: jest.fn(() => ['confluence'])
-    }));
+    // Mock uuid
+    const uuidPath = require.resolve('uuid');
+    require.cache[uuidPath] = {
+      id: uuidPath,
+      filename: uuidPath,
+      loaded: true,
+      exports: { v4: vi.fn(() => 'mock-client-id') }
+    };
 
-    jest.doMock('../../services/state', () => ({
-      clients,
-      queue: queueArray,
-      getActiveSession: jest.fn(() => null),
-      setActiveSession: jest.fn(),
-      clearDisconnectGraceTimeout: jest.fn(),
-      setDisconnectGraceTimeout: jest.fn(),
-      pendingSessionTokens
-    }));
+    // Mock @demo-platform/queue-manager-core
+    const corePath = require.resolve('@demo-platform/queue-manager-core');
+    require.cache[corePath] = {
+      id: corePath,
+      filename: corePath,
+      loaded: true,
+      exports: { createConnectionRateLimiter: vi.fn(() => rateLimiterMock) }
+    };
 
-    jest.doMock('../../services/queue', () => ({
-      joinQueue: jest.fn(),
-      leaveQueue: jest.fn(),
-      broadcastQueueUpdate: jest.fn(),
-      processQueue: jest.fn()
-    }));
+    // Mock config
+    const configPath = require.resolve('../../config');
+    require.cache[configPath] = {
+      id: configPath,
+      filename: configPath,
+      loaded: true,
+      exports: {
+        RATE_LIMIT_WINDOW_MS: 60000,
+        RATE_LIMIT_MAX_CONNECTIONS: 10,
+        ALLOWED_ORIGINS: ['http://localhost:8080'],
+        ENABLED_PLATFORMS: ['confluence', 'jira'],
+        DISCONNECT_GRACE_MS: 10000,
+        getConfiguredPlatforms: vi.fn(() => ['confluence'])
+      }
+    };
 
-    jest.doMock('../../services/session', () => ({
-      endSession: jest.fn()
-    }));
+    // Mock state
+    const statePath = require.resolve('../../services/state');
+    require.cache[statePath] = {
+      id: statePath,
+      filename: statePath,
+      loaded: true,
+      exports: {
+        clients,
+        queue: queueArray,
+        getActiveSession: mockGetActiveSession,
+        setActiveSession: mockSetActiveSession,
+        clearDisconnectGraceTimeout: mockClearDisconnectGraceTimeout,
+        setDisconnectGraceTimeout: mockSetDisconnectGraceTimeout,
+        pendingSessionTokens
+      }
+    };
 
+    // Mock queue service
+    const queuePath = require.resolve('../../services/queue');
+    require.cache[queuePath] = {
+      id: queuePath,
+      filename: queuePath,
+      loaded: true,
+      exports: {
+        joinQueue: vi.fn(),
+        leaveQueue: vi.fn(),
+        broadcastQueueUpdate: vi.fn(),
+        processQueue: vi.fn()
+      }
+    };
+
+    // Mock session service
+    const sessionPath = require.resolve('../../services/session');
+    require.cache[sessionPath] = {
+      id: sessionPath,
+      filename: sessionPath,
+      loaded: true,
+      exports: { endSession: vi.fn() }
+    };
+
+    // Now require the modules
     state = require('../../services/state');
     config = require('../../config');
     queue = require('../../services/queue');
     websocket = require('../../handlers/websocket');
 
     mockWs = {
-      send: jest.fn(),
-      close: jest.fn(),
-      on: jest.fn()
+      send: vi.fn(),
+      close: vi.fn(),
+      on: vi.fn()
     };
 
     mockWss = {
-      on: jest.fn()
+      on: vi.fn()
     };
 
     mockRedis = {
-      get: jest.fn(),
-      set: jest.fn(),
-      del: jest.fn()
+      get: vi.fn(),
+      set: vi.fn(),
+      del: vi.fn()
     };
   });
 
@@ -345,7 +417,7 @@ describe('websocket handler', () => {
     });
 
     it('should start grace period if client has active session', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       state.getActiveSession.mockReturnValue({
         clientId: 'mock-client-id',
@@ -357,7 +429,7 @@ describe('websocket handler', () => {
       expect(state.clearDisconnectGraceTimeout).toHaveBeenCalled();
       expect(state.setDisconnectGraceTimeout).toHaveBeenCalled();
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should clean up pending session token if not in active session', () => {
