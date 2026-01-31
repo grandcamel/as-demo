@@ -2,6 +2,11 @@
  * Tests for routes/health.js
  */
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 describe('health routes', () => {
   let health;
   let mockApp;
@@ -10,41 +15,77 @@ describe('health routes', () => {
   let config;
   let registeredRoutes;
 
+  // Shared mock state
+  let queueArray;
+  let mockGetActiveSession;
+  let mockGetConfiguredPlatforms;
+  let mockGetScenariosByPlatform;
+
   beforeEach(() => {
-    jest.resetModules();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // Set up mocks before requiring modules
-    jest.doMock('../../services/state', () => ({
-      queue: [],
-      getActiveSession: jest.fn(() => null)
+    // Create fresh state
+    queueArray = [];
+    mockGetActiveSession = vi.fn(() => null);
+    mockGetConfiguredPlatforms = vi.fn(() => ['confluence', 'jira']);
+    mockGetScenariosByPlatform = vi.fn(() => ({
+      confluence: { page: { title: 'Page Management' } },
+      jira: { issue: { title: 'Issue Management' } }
     }));
 
-    jest.doMock('../../config', () => ({
-      ENABLED_PLATFORMS: ['confluence', 'jira', 'splunk'],
-      MAX_QUEUE_SIZE: 10,
-      AVERAGE_SESSION_MINUTES: 45,
-      getConfiguredPlatforms: jest.fn(() => ['confluence', 'jira']),
-      getScenariosByPlatform: jest.fn(() => ({
-        confluence: { page: { title: 'Page Management' } },
-        jira: { issue: { title: 'Issue Management' } }
-      }))
-    }));
+    // Clear require cache
+    const paths = [
+      '../../routes/health',
+      '../../services/state',
+      '../../config'
+    ].map(p => {
+      try { return require.resolve(p); } catch { return null; }
+    }).filter(Boolean);
 
+    paths.forEach(p => delete require.cache[p]);
+
+    // Mock state
+    const statePath = require.resolve('../../services/state');
+    require.cache[statePath] = {
+      id: statePath,
+      filename: statePath,
+      loaded: true,
+      exports: {
+        queue: queueArray,
+        getActiveSession: mockGetActiveSession
+      }
+    };
+
+    // Mock config
+    const configPath = require.resolve('../../config');
+    require.cache[configPath] = {
+      id: configPath,
+      filename: configPath,
+      loaded: true,
+      exports: {
+        ENABLED_PLATFORMS: ['confluence', 'jira', 'splunk'],
+        MAX_QUEUE_SIZE: 10,
+        AVERAGE_SESSION_MINUTES: 45,
+        getConfiguredPlatforms: mockGetConfiguredPlatforms,
+        getScenariosByPlatform: mockGetScenariosByPlatform
+      }
+    };
+
+    // Import modules
     state = require('../../services/state');
     config = require('../../config');
     health = require('../../routes/health');
 
     registeredRoutes = {};
     mockApp = {
-      get: jest.fn((path, handler) => {
+      get: vi.fn((path, handler) => {
         registeredRoutes[path] = handler;
       })
     };
 
     // Mock Redis client
     mockRedis = {
-      ping: jest.fn().mockResolvedValue('PONG')
+      ping: vi.fn().mockResolvedValue('PONG')
     };
 
     health.register(mockApp, mockRedis);
@@ -81,9 +122,9 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/health'];
       mockReq = {};
       mockRes = {
-        set: jest.fn().mockReturnThis(),
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
+        set: vi.fn().mockReturnThis(),
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn()
       };
     });
 
@@ -139,8 +180,8 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/health/live'];
       mockReq = {};
       mockRes = {
-        set: jest.fn().mockReturnThis(),
-        json: jest.fn()
+        set: vi.fn().mockReturnThis(),
+        json: vi.fn()
       };
     });
 
@@ -164,7 +205,7 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/status'];
       mockReq = {};
       mockRes = {
-        json: jest.fn()
+        json: vi.fn()
       };
     });
 
@@ -210,7 +251,7 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/platforms'];
       mockReq = {};
       mockRes = {
-        json: jest.fn()
+        json: vi.fn()
       };
     });
 

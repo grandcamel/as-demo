@@ -2,7 +2,100 @@
  * Tests for routes/scenarios.js
  */
 
-const path = require('path');
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+// Helper function to set up mocks for scenarios module
+function setupScenariosModule(options = {}) {
+  const {
+    readFileSyncFn = vi.fn(() => '<!DOCTYPE html><html><head><title>{{TITLE}}</title></head><body>{{ICON}} {{PLATFORM}}: {{CONTENT}}</body></html>'),
+    readFileFn = vi.fn(),
+    markedFn = vi.fn((md) => `<p>${md}</p>`),
+    sanitizeFn = vi.fn((html) => html),
+    scenarioNames = {
+      'page': {
+        file: 'confluence/page.md',
+        title: 'Page Management',
+        icon: '📝',
+        platform: 'confluence'
+      },
+      'malicious': {
+        file: '../../../etc/passwd',
+        title: 'Malicious',
+        icon: '💀',
+        platform: 'attack'
+      }
+    },
+    getScenariosByPlatformFn = vi.fn(() => ({
+      confluence: { page: { title: 'Page Management' } }
+    }))
+  } = options;
+
+  // Clear require cache
+  const paths = [
+    '../../routes/scenarios',
+    '../../config',
+    'fs',
+    'marked',
+    'isomorphic-dompurify'
+  ].map(p => {
+    try { return require.resolve(p); } catch { return null; }
+  }).filter(Boolean);
+
+  paths.forEach(p => delete require.cache[p]);
+
+  // Mock fs
+  const fsPath = require.resolve('fs');
+  const fsMock = {
+    readFileSync: readFileSyncFn,
+    readFile: readFileFn
+  };
+  require.cache[fsPath] = {
+    id: fsPath,
+    filename: fsPath,
+    loaded: true,
+    exports: fsMock
+  };
+
+  // Mock marked
+  const markedPath = require.resolve('marked');
+  require.cache[markedPath] = {
+    id: markedPath,
+    filename: markedPath,
+    loaded: true,
+    exports: { marked: markedFn }
+  };
+
+  // Mock isomorphic-dompurify
+  const dompurifyPath = require.resolve('isomorphic-dompurify');
+  require.cache[dompurifyPath] = {
+    id: dompurifyPath,
+    filename: dompurifyPath,
+    loaded: true,
+    exports: { sanitize: sanitizeFn }
+  };
+
+  // Mock config
+  const configPath = require.resolve('../../config');
+  require.cache[configPath] = {
+    id: configPath,
+    filename: configPath,
+    loaded: true,
+    exports: {
+      SCENARIOS_PATH: '/opt/demo-container/scenarios',
+      SCENARIO_NAMES: scenarioNames,
+      getScenariosByPlatform: getScenariosByPlatformFn
+    }
+  };
+
+  return {
+    fs: fsMock,
+    config: require('../../config'),
+    scenarios: require('../../routes/scenarios')
+  };
+}
 
 describe('scenarios routes', () => {
   let scenarios;
@@ -12,51 +105,16 @@ describe('scenarios routes', () => {
   let fs;
 
   beforeEach(() => {
-    jest.resetModules();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    // Set up mocks before requiring modules
-    jest.doMock('fs', () => ({
-      readFileSync: jest.fn(() => '<!DOCTYPE html><html><head><title>{{TITLE}}</title></head><body>{{ICON}} {{PLATFORM}}: {{CONTENT}}</body></html>'),
-      readFile: jest.fn()
-    }));
-
-    jest.doMock('marked', () => ({
-      marked: jest.fn((md) => `<p>${md}</p>`)
-    }));
-
-    jest.doMock('isomorphic-dompurify', () => ({
-      sanitize: jest.fn((html) => html)
-    }));
-
-    jest.doMock('../../config', () => ({
-      SCENARIOS_PATH: '/opt/demo-container/scenarios',
-      SCENARIO_NAMES: {
-        'page': {
-          file: 'confluence/page.md',
-          title: 'Page Management',
-          icon: '📝',
-          platform: 'confluence'
-        },
-        'malicious': {
-          file: '../../../etc/passwd',
-          title: 'Malicious',
-          icon: '💀',
-          platform: 'attack'
-        }
-      },
-      getScenariosByPlatform: jest.fn(() => ({
-        confluence: { page: { title: 'Page Management' } }
-      }))
-    }));
-
-    fs = require('fs');
-    config = require('../../config');
-    scenarios = require('../../routes/scenarios');
+    const mocks = setupScenariosModule();
+    fs = mocks.fs;
+    config = mocks.config;
+    scenarios = mocks.scenarios;
 
     registeredRoutes = {};
     mockApp = {
-      get: jest.fn((path, handler) => {
+      get: vi.fn((path, handler) => {
         registeredRoutes[path] = handler;
       })
     };
@@ -85,10 +143,10 @@ describe('scenarios routes', () => {
         params: { name: 'page' }
       };
       mockRes = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        setHeader: jest.fn(),
-        send: jest.fn()
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+        setHeader: vi.fn(),
+        send: vi.fn()
       };
     });
 
@@ -154,7 +212,7 @@ describe('scenarios routes', () => {
       handler = registeredRoutes['/api/scenarios'];
       mockReq = {};
       mockRes = {
-        json: jest.fn()
+        json: vi.fn()
       };
     });
 
@@ -170,29 +228,15 @@ describe('scenarios routes', () => {
 
   describe('template loading', () => {
     it('should use fallback template when file not found', () => {
-      jest.resetModules();
-
-      // Set up mocks for this specific test
-      jest.doMock('fs', () => ({
-        readFileSync: jest.fn(() => {
+      // Set up mocks with readFileSync that throws
+      const mocks = setupScenariosModule({
+        readFileSyncFn: vi.fn(() => {
           throw new Error('ENOENT');
         }),
-        readFile: jest.fn((path, encoding, callback) => {
+        readFileFn: vi.fn((path, encoding, callback) => {
           callback(null, 'Content');
-        })
-      }));
-
-      jest.doMock('marked', () => ({
-        marked: jest.fn((md) => `<p>${md}</p>`)
-      }));
-
-      jest.doMock('isomorphic-dompurify', () => ({
-        sanitize: jest.fn((html) => html)
-      }));
-
-      jest.doMock('../../config', () => ({
-        SCENARIOS_PATH: '/opt/demo-container/scenarios',
-        SCENARIO_NAMES: {
+        }),
+        scenarioNames: {
           'page': {
             file: 'confluence/page.md',
             title: 'Page Management',
@@ -200,25 +244,24 @@ describe('scenarios routes', () => {
             platform: 'confluence'
           }
         },
-        getScenariosByPlatform: jest.fn()
-      }));
+        getScenariosByPlatformFn: vi.fn()
+      });
 
-      const freshScenarios = require('../../routes/scenarios');
       const localRoutes = {};
       const freshApp = {
-        get: jest.fn((path, handler) => {
+        get: vi.fn((path, handler) => {
           localRoutes[path] = handler;
         })
       };
-      freshScenarios.register(freshApp);
+      mocks.scenarios.register(freshApp);
 
       const handler = localRoutes['/api/scenarios/:name'];
       const mockReq = { params: { name: 'page' } };
       const mockRes = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        setHeader: jest.fn(),
-        send: jest.fn()
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+        setHeader: vi.fn(),
+        send: vi.fn()
       };
 
       handler(mockReq, mockRes);
@@ -234,27 +277,13 @@ describe('scenarios routes', () => {
 
   describe('escapeHtml', () => {
     it('should escape XSS in scenario metadata', () => {
-      jest.resetModules();
-
-      // Set up mocks for this specific test
-      jest.doMock('fs', () => ({
-        readFileSync: jest.fn(() => '{{TITLE}} {{ICON}}'),
-        readFile: jest.fn((path, encoding, callback) => {
+      // Set up mocks with XSS-containing scenario
+      const mocks = setupScenariosModule({
+        readFileSyncFn: vi.fn(() => '{{TITLE}} {{ICON}}'),
+        readFileFn: vi.fn((path, encoding, callback) => {
           callback(null, 'Safe content');
-        })
-      }));
-
-      jest.doMock('marked', () => ({
-        marked: jest.fn((md) => `<p>${md}</p>`)
-      }));
-
-      jest.doMock('isomorphic-dompurify', () => ({
-        sanitize: jest.fn((html) => html)
-      }));
-
-      jest.doMock('../../config', () => ({
-        SCENARIOS_PATH: '/opt/demo-container/scenarios',
-        SCENARIO_NAMES: {
+        }),
+        scenarioNames: {
           'xss': {
             file: 'test.md',
             title: '<script>alert("xss")</script>',
@@ -262,25 +291,24 @@ describe('scenarios routes', () => {
             platform: 'test'
           }
         },
-        getScenariosByPlatform: jest.fn()
-      }));
+        getScenariosByPlatformFn: vi.fn()
+      });
 
-      const freshScenarios = require('../../routes/scenarios');
       const localRoutes = {};
       const freshApp = {
-        get: jest.fn((path, handler) => {
+        get: vi.fn((path, handler) => {
           localRoutes[path] = handler;
         })
       };
-      freshScenarios.register(freshApp);
+      mocks.scenarios.register(freshApp);
 
       const handler = localRoutes['/api/scenarios/:name'];
       const mockReq = { params: { name: 'xss' } };
       const mockRes = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        setHeader: jest.fn(),
-        send: jest.fn()
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+        setHeader: vi.fn(),
+        send: vi.fn()
       };
 
       handler(mockReq, mockRes);

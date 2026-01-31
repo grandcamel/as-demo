@@ -2,6 +2,11 @@
  * Tests for routes/session.js
  */
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 describe('session routes', () => {
   let session;
   let mockApp;
@@ -11,31 +16,77 @@ describe('session routes', () => {
   let invite;
   let registeredRoutes;
 
+  // Shared mock state
+  let sessionTokens;
+  let pendingSessionTokens;
+  let mockGetActiveSession;
+  let mockCheckInviteRateLimit;
+  let mockRecordFailedInviteAttempt;
+  let mockValidateInvite;
+
   beforeEach(() => {
-    jest.resetModules();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Create fresh Maps for each test
-    const sessionTokens = new Map();
-    const pendingSessionTokens = new Map();
+    sessionTokens = new Map();
+    pendingSessionTokens = new Map();
 
-    jest.doMock('../../config', () => ({
-      SESSION_TIMEOUT_MINUTES: 60,
-      COOKIE_SECURE: false
-    }));
+    mockGetActiveSession = vi.fn(() => null);
+    mockCheckInviteRateLimit = vi.fn(() => ({ allowed: true, remaining: 9 }));
+    mockRecordFailedInviteAttempt = vi.fn();
+    mockValidateInvite = vi.fn();
 
-    jest.doMock('../../services/state', () => ({
-      sessionTokens,
-      pendingSessionTokens,
-      getActiveSession: jest.fn(() => null)
-    }));
+    // Clear require cache
+    const paths = [
+      '../../routes/session',
+      '../../services/state',
+      '../../services/invite',
+      '../../config'
+    ].map(p => {
+      try { return require.resolve(p); } catch { return null; }
+    }).filter(Boolean);
 
-    jest.doMock('../../services/invite', () => ({
-      checkInviteRateLimit: jest.fn(() => ({ allowed: true, remaining: 9 })),
-      recordFailedInviteAttempt: jest.fn(),
-      validateInvite: jest.fn()
-    }));
+    paths.forEach(p => delete require.cache[p]);
 
+    // Mock config
+    const configPath = require.resolve('../../config');
+    require.cache[configPath] = {
+      id: configPath,
+      filename: configPath,
+      loaded: true,
+      exports: {
+        SESSION_TIMEOUT_MINUTES: 60,
+        COOKIE_SECURE: false
+      }
+    };
+
+    // Mock state
+    const statePath = require.resolve('../../services/state');
+    require.cache[statePath] = {
+      id: statePath,
+      filename: statePath,
+      loaded: true,
+      exports: {
+        sessionTokens,
+        pendingSessionTokens,
+        getActiveSession: mockGetActiveSession
+      }
+    };
+
+    // Mock invite service
+    const invitePath = require.resolve('../../services/invite');
+    require.cache[invitePath] = {
+      id: invitePath,
+      filename: invitePath,
+      loaded: true,
+      exports: {
+        checkInviteRateLimit: mockCheckInviteRateLimit,
+        recordFailedInviteAttempt: mockRecordFailedInviteAttempt,
+        validateInvite: mockValidateInvite
+      }
+    };
+
+    // Import modules
     state = require('../../services/state');
     config = require('../../config');
     invite = require('../../services/invite');
@@ -43,18 +94,18 @@ describe('session routes', () => {
 
     registeredRoutes = {};
     mockApp = {
-      get: jest.fn((path, handler) => {
+      get: vi.fn((path, handler) => {
         registeredRoutes[`GET ${path}`] = handler;
       }),
-      post: jest.fn((path, handler) => {
+      post: vi.fn((path, handler) => {
         registeredRoutes[`POST ${path}`] = handler;
       })
     };
 
     mockRedis = {
-      get: jest.fn(),
-      set: jest.fn(),
-      del: jest.fn()
+      get: vi.fn(),
+      set: vi.fn(),
+      del: vi.fn()
     };
 
     session.register(mockApp, mockRedis);
@@ -89,9 +140,9 @@ describe('session routes', () => {
         cookies: {}
       };
       mockRes = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn(),
-        set: jest.fn()
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn(),
+        set: vi.fn()
       };
     });
 
@@ -156,9 +207,9 @@ describe('session routes', () => {
         body: {}
       };
       mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-        cookie: jest.fn()
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn(),
+        cookie: vi.fn()
       };
     });
 
@@ -223,8 +274,8 @@ describe('session routes', () => {
       handler = registeredRoutes['POST /api/session/logout'];
       mockReq = {};
       mockRes = {
-        json: jest.fn(),
-        clearCookie: jest.fn()
+        json: vi.fn(),
+        clearCookie: vi.fn()
       };
     });
 
@@ -254,8 +305,8 @@ describe('session routes', () => {
         socket: { remoteAddress: '127.0.0.1' }
       };
       mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn()
       };
     });
 
