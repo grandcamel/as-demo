@@ -11,12 +11,19 @@
     "down": "docker compose down",
     "logs": "docker compose logs -f",
     "lint": "npm run lint --prefix queue-manager",
-    "lint:fix": "npm run lint:fix --prefix queue-manager"
+    "lint:fix": "npm run lint:fix --prefix queue-manager",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --prefix queue-manager",
+    "test:coverage": "npm run test:coverage --prefix queue-manager"
   },
   "workspaces": [
     "queue-manager"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
   }
 }

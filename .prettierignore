@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+**/coverage/
+
+# Docker volumes and data
+data/
+logs/
+*.log
+
+# Generated files
+package-lock.json
+pnpm-lock.yaml
+*.min.js
+*.bundle.js
+
+# Config that shouldn't be reformatted
+.env*
+*.env
+
+# Observability configs (may have special formatting)
+observability/grafana/dashboards/*.json
+observability/grafana/provisioning/**/*.yaml
+
+# Secrets (should never be touched)
+secrets/
+
+# Vendor/third-party
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

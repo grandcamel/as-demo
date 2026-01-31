@@ -6,23 +6,24 @@
  * - JIRA
  * - Splunk
  * - Cross-platform scenarios
+ *
+ * Uses Zod for runtime validation of environment variables.
  */
 
-// Valid platform names
-const VALID_PLATFORMS = ['confluence', 'jira', 'splunk'];
+const { parseEnv, VALID_PLATFORMS } = require('./schema');
 
-// Parse enabled platforms from environment
-const ENABLED_PLATFORMS = (process.env.ENABLED_PLATFORMS || 'confluence,jira,splunk')
-  .split(',')
-  .map(p => p.trim().toLowerCase())
-  .filter(p => VALID_PLATFORMS.includes(p));
-
-// Validate at least one platform is enabled
-if (ENABLED_PLATFORMS.length === 0) {
-  console.error('FATAL: No valid platforms enabled. Check ENABLED_PLATFORMS environment variable.');
-  console.error(`Valid platforms: ${VALID_PLATFORMS.join(', ')}`);
+// Parse and validate environment configuration
+let env;
+try {
+  env = parseEnv(process.env);
+} catch (error) {
+  console.error('FATAL: Configuration validation failed.');
+  console.error(error.message);
   process.exit(1);
 }
+
+// Extract enabled platforms from validated config
+const ENABLED_PLATFORMS = env.ENABLED_PLATFORMS;
 
 // Load platform configurations conditionally
 const platforms = {};
@@ -66,39 +67,39 @@ function buildScenarioNames() {
 }
 
 module.exports = {
-  // Server
-  PORT: process.env.PORT || 3000,
-  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  // Server (from validated env)
+  PORT: env.PORT,
+  REDIS_URL: env.REDIS_URL,
 
-  // Session
-  SESSION_TIMEOUT_MINUTES: parseInt(process.env.SESSION_TIMEOUT_MINUTES, 10) || 60,
-  MAX_QUEUE_SIZE: parseInt(process.env.MAX_QUEUE_SIZE, 10) || 10,
+  // Session (from validated env)
+  SESSION_TIMEOUT_MINUTES: env.SESSION_TIMEOUT_MINUTES,
+  MAX_QUEUE_SIZE: env.MAX_QUEUE_SIZE,
   AVERAGE_SESSION_MINUTES: 45,
   TTYD_PORT: 7681,
   DISCONNECT_GRACE_MS: 10000,
   AUDIT_RETENTION_DAYS: 30,
-  SESSION_SECRET: process.env.SESSION_SECRET || 'change-me-in-production',
+  SESSION_SECRET: env.SESSION_SECRET,
 
   // Session environment files (for secure credential passing)
-  SESSION_ENV_HOST_PATH: process.env.SESSION_ENV_HOST_PATH || '/tmp/session-env',
+  SESSION_ENV_HOST_PATH: env.SESSION_ENV_HOST_PATH,
   SESSION_ENV_CONTAINER_PATH: '/run/session-env',
 
-  // Rate limiting
-  RATE_LIMIT_WINDOW_MS: 60 * 1000,  // 1 minute window
-  RATE_LIMIT_MAX_CONNECTIONS: 10,    // Max connections per IP per window
+  // Rate limiting (from validated env)
+  RATE_LIMIT_WINDOW_MS: env.RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX_CONNECTIONS: env.RATE_LIMIT_MAX_CONNECTIONS,
 
-  // Invite brute-force protection
-  INVITE_RATE_LIMIT_WINDOW_MS: 60 * 60 * 1000,  // 1 hour window
-  INVITE_RATE_LIMIT_MAX_ATTEMPTS: 10,            // Max failed attempts per IP per hour
+  // Invite brute-force protection (from validated env)
+  INVITE_RATE_LIMIT_WINDOW_MS: env.INVITE_RATE_LIMIT_WINDOW_MS,
+  INVITE_RATE_LIMIT_MAX_ATTEMPTS: env.INVITE_RATE_LIMIT_MAX_ATTEMPTS,
 
-  // Claude authentication
-  CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN || '',
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
+  // Claude authentication (from validated env)
+  CLAUDE_CODE_OAUTH_TOKEN: env.CLAUDE_CODE_OAUTH_TOKEN,
+  ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY,
 
-  // Base URL and allowed origins
-  BASE_URL: process.env.BASE_URL || 'http://localhost:8080',
-  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || process.env.BASE_URL || 'http://localhost:8080').split(',').map(o => o.trim()),
-  COOKIE_SECURE: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true',
+  // Base URL and allowed origins (from validated env)
+  BASE_URL: env.BASE_URL,
+  ALLOWED_ORIGINS: env.ALLOWED_ORIGINS.length > 0 ? env.ALLOWED_ORIGINS : [env.BASE_URL],
+  COOKIE_SECURE: env.COOKIE_SECURE || env.NODE_ENV === 'production',
 
   // Multi-platform configuration
   VALID_PLATFORMS,
@@ -106,12 +107,12 @@ module.exports = {
   platforms,
   crossPlatform,
 
-  // Scenarios
-  SCENARIOS_PATH: '/opt/demo-container/scenarios',
+  // Scenarios (from validated env)
+  SCENARIOS_PATH: env.SCENARIOS_PATH,
   SCENARIO_NAMES: buildScenarioNames(),
 
-  // Demo container image
-  DEMO_CONTAINER_IMAGE: process.env.DEMO_CONTAINER_IMAGE || 'as-demo-container:latest',
+  // Demo container image (from validated env)
+  DEMO_CONTAINER_IMAGE: env.DEMO_CONTAINER_IMAGE,
 
   /**
    * Get all environment variables for a session (all enabled platforms).

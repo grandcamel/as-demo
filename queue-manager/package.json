@@ -6,11 +6,11 @@
   "scripts": {
     "start": "node --require ./instrumentation.js server.js",
     "dev": "node --watch --require ./instrumentation.js server.js",
-    "lint": "eslint *.js config/*.js config/platforms/*.js services/*.js routes/*.js handlers/*.js",
-    "lint:fix": "eslint *.js config/*.js config/platforms/*.js services/*.js routes/*.js handlers/*.js --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "lint": "oxlint *.js config/*.js config/platforms/*.js services/*.js routes/*.js handlers/*.js lib/*.js",
+    "lint:fix": "oxlint *.js config/*.js config/platforms/*.js services/*.js routes/*.js handlers/*.js lib/*.js --fix",
+    "test": "env -u SPLUNK_URL -u SPLUNK_PASSWORD -u SPLUNK_USERNAME -u SPLUNK_HEC_TOKEN -u JIRA_API_TOKEN -u JIRA_EMAIL -u JIRA_SITE_URL -u CONFLUENCE_API_TOKEN -u CONFLUENCE_EMAIL -u CONFLUENCE_SITE_URL vitest run",
+    "test:watch": "env -u SPLUNK_URL -u SPLUNK_PASSWORD -u SPLUNK_USERNAME -u SPLUNK_HEC_TOKEN -u JIRA_API_TOKEN -u JIRA_EMAIL -u JIRA_SITE_URL -u CONFLUENCE_API_TOKEN -u CONFLUENCE_EMAIL -u CONFLUENCE_SITE_URL vitest",
+    "test:coverage": "env -u SPLUNK_URL -u SPLUNK_PASSWORD -u SPLUNK_USERNAME -u SPLUNK_HEC_TOKEN -u JIRA_API_TOKEN -u JIRA_EMAIL -u JIRA_SITE_URL -u CONFLUENCE_API_TOKEN -u CONFLUENCE_EMAIL -u CONFLUENCE_SITE_URL vitest run --coverage"
   },
   "dependencies": {
     "@demo-platform/queue-manager-core": "file:./lib",
@@ -29,14 +29,15 @@
     "isomorphic-dompurify": "^2.16.0",
     "marked": "^15.0.0",
     "uuid": "^9.0.1",
-    "ws": "^8.16.0"
+    "ws": "^8.16.0",
+    "zod": "^3.24.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "eslint": "^9.39.2",
-    "jest": "^29.7.0"
+    "@vitest/coverage-v8": "^2.1.8",
+    "oxlint": "^0.16.0",
+    "vitest": "^2.1.8"
   }
 }
