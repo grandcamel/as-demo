@@ -89,7 +89,7 @@ as-demo/
 | nginx | 80, 443 (8080 in dev) | Reverse proxy, SSL, static content |
 | queue-manager | 3000 | WebSocket, session management, invites |
 | redis | 6379 | Session state, queue, invite tokens |
-| lgtm | 3001 (Grafana) | Grafana, Loki, Tempo (LGTM stack) |
+| lgtm | 3001 (Grafana), 3100 (Loki), 4317/4318 (OTLP) | Grafana, Loki, Tempo (LGTM stack) |
 | splunk | 8000, 8089 | Splunk Enterprise (profile: full) |
 
 ## Development Commands
@@ -776,6 +776,42 @@ apt-get update && apt-get install -y docker-compose-plugin
 - Set `OTEL_EXPORTER_OTLP_ENDPOINT` for trace capture
 - Default: `http://lgtm:4318` inside Docker network
 - Local: `http://localhost:4318` when running outside Docker
+
+**Loki Event Types (skill-test job)**
+
+| Event | Description | Key Fields |
+|-------|-------------|------------|
+| `prompt_start` | Claude prompt begins | prompt_text, model, prompt_index |
+| `claude_request_start` | Subprocess launched | prompt_index, model |
+| `tool_execution_start` | Tool invoked | tool_name, tool_index, tool_input |
+| `tool_execution_end` | Tool completed | tool_name, tool_index, result_preview |
+| `claude_response_received` | Subprocess finished | duration_seconds, exit_code |
+| `prompt_complete` | Full prompt cycle done | prompt, response, tools_called, cost_usd |
+| `assertion_start` | Assertions begin | prompt_index |
+| `assertion_end` | Assertions complete | duration_seconds, assertion counts |
+| `assertion_failure` | Assertions failed | failed_tool_assertions, failed_text_assertions |
+| `judge_prompt` | Judge prompt captured | judge_prompt_full (8000 chars) |
+| `judge_request_start` | Judge subprocess launched | prompt_index, model |
+| `judge_response_received` | Judge returned | duration_seconds, response_length |
+| `judge_response_raw` | Raw judge output | judge_response_raw (5000 chars) |
+| `judge_complete` | Judge parsed | quality, tool_accuracy, reasoning, confidence |
+| `judge_error` | Judge failed | error |
+| `judge_parse_error` | JSON parse failed | error, raw_output |
+| `checkpoint_save` | Session saved | prompt_index, session_id |
+| `checkpoint_load` | Session loaded | prompt_index, session_id |
+| `checkpoint_fork` | Forking from checkpoint | fork_from_prompt, target_prompt |
+| `test_start` | Test run begins | scenario, prompt_count, model |
+| `test_complete` | Test run ends | passed_count, quality distribution, durations |
+| `failure_detail` | Prompt failed | full prompt/response, all assertions, suggestions |
+
+**Loki Event Types (skill-refine job)**
+
+| Event | Description | Key Fields |
+|-------|-------------|------------|
+| `refine_start` | Refinement loop begins | scenario, platform, max_attempts, mock_mode |
+| `refine_attempt` | Fix attempt starts | attempt, fork_from, prompt_index |
+| `refine_fix_applied` | Files changed | files_changed, failed_prompt, quality |
+| `refine_complete` | Loop finished | success, total_attempts, total_duration_seconds |
 
 **Grafana Dashboard Reload**
 - Dashboards need refresh after provisioning config changes
