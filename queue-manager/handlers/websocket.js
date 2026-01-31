@@ -10,6 +10,11 @@ const config = require('../config');
 const state = require('../services/state');
 const { joinQueue, leaveQueue, broadcastQueueUpdate, processQueue } = require('../services/queue');
 const { endSession } = require('../services/session');
+const {
+  ErrorCodes,
+  formatWsError,
+  formatWsCloseReason,
+} = require('../errors');
 
 // Rate limiter instance using shared library
 const connectionRateLimiter = createConnectionRateLimiter({
@@ -47,7 +52,13 @@ function setup(wss, redis) {
     const rateLimit = checkConnectionRateLimit(clientIp);
     if (!rateLimit.allowed) {
       console.log(`Rate limit exceeded for ${clientIp}, rejecting connection`);
-      ws.close(1008, `Rate limit exceeded. Retry after ${rateLimit.retryAfter} seconds.`);
+      ws.close(
+        1008,
+        formatWsCloseReason(
+          ErrorCodes.RATE_LIMITED_CONNECTION,
+          `Retry after ${rateLimit.retryAfter} seconds`
+        )
+      );
       return;
     }
 
@@ -58,13 +69,19 @@ function setup(wss, redis) {
       // Allow missing origin only in development (e.g., curl, Postman testing)
       if (process.env.NODE_ENV === 'production') {
         console.log('WebSocket connection rejected: missing origin header');
-        ws.close(1008, 'Origin header required');
+        ws.close(
+          1008,
+          formatWsCloseReason(ErrorCodes.ORIGIN_REQUIRED, 'Origin header required')
+        );
         return;
       }
       console.log('Warning: WebSocket connection without origin header (allowed in dev mode)');
     } else if (!config.ALLOWED_ORIGINS.includes(origin)) {
       console.log(`WebSocket connection rejected: invalid origin ${origin}`);
-      ws.close(1008, 'Origin not allowed');
+      ws.close(
+        1008,
+        formatWsCloseReason(ErrorCodes.ORIGIN_NOT_ALLOWED, 'Origin not allowed')
+      );
       return;
     }
 
@@ -88,7 +105,10 @@ function setup(wss, redis) {
         await handleMessage(redis, ws, message);
       } catch (err) {
         console.error('Error handling message:', err.message);
-        sendError(ws, 'Invalid message format');
+        ws.send(formatWsError(
+          ErrorCodes.INVALID_MESSAGE_FORMAT,
+          'Invalid message format'
+        ));
       }
     });
 
@@ -125,7 +145,10 @@ async function handleMessage(redis, ws, message) {
       break;
 
     default:
-      sendError(ws, `Unknown message type: ${message.type}`);
+      ws.send(formatWsError(
+        ErrorCodes.UNKNOWN_MESSAGE_TYPE,
+        `Unknown message type: ${message.type}`
+      ));
   }
 }
 
@@ -184,10 +207,6 @@ function sendStatus(ws) {
     enabled_platforms: config.ENABLED_PLATFORMS,
     configured_platforms: config.getConfiguredPlatforms()
   }));
-}
-
-function sendError(ws, message) {
-  ws.send(JSON.stringify({ type: 'error', message }));
 }
 
 module.exports = { setup, cleanupRateLimits };

@@ -5,6 +5,12 @@
 const config = require('../config');
 const state = require('../services/state');
 const { checkInviteRateLimit, recordFailedInviteAttempt, validateInvite } = require('../services/invite');
+const {
+  ErrorCodes,
+  AuthError,
+  ValidationError,
+  RateLimitError,
+} = require('../errors');
 
 /**
  * Register session routes.
@@ -17,7 +23,11 @@ function register(app, redis) {
     const sessionCookie = req.cookies.demo_session;
 
     if (!sessionCookie) {
-      return res.status(401).send('No session cookie');
+      const error = new AuthError(
+        ErrorCodes.NO_SESSION_COOKIE,
+        'No session cookie'
+      );
+      return res.status(error.statusCode).json(error.toJSON());
     }
 
     const activeSession = state.getActiveSession();
@@ -26,14 +36,14 @@ function register(app, redis) {
     const sessionId = state.sessionTokens.get(sessionCookie);
     if (sessionId && activeSession && activeSession.sessionId === sessionId) {
       res.set('X-Grafana-User', `demo-${sessionId.slice(0, 8)}`);
-      return res.status(200).send('OK');
+      return res.status(200).json({ valid: true });
     }
 
     // Check pending session token (user in queue or session starting)
     const pending = state.pendingSessionTokens.get(sessionCookie);
     if (pending) {
       res.set('X-Grafana-User', `demo-${pending.clientId.slice(0, 8)}`);
-      return res.status(200).send('OK');
+      return res.status(200).json({ valid: true });
     }
 
     // Clean up stale token if it was in sessionTokens
@@ -41,7 +51,11 @@ function register(app, redis) {
       state.sessionTokens.delete(sessionCookie);
     }
 
-    return res.status(401).send('Session not active');
+    const error = new AuthError(
+      ErrorCodes.SESSION_NOT_ACTIVE,
+      'Session not active'
+    );
+    return res.status(error.statusCode).json(error.toJSON());
   });
 
   // Set session cookie with secure attributes
@@ -49,7 +63,12 @@ function register(app, redis) {
     const { token } = req.body;
 
     if (!token || typeof token !== 'string') {
-      return res.status(400).json({ error: 'Token required' });
+      const error = new ValidationError(
+        ErrorCodes.INVALID_INPUT,
+        'Token required',
+        { field: 'token' }
+      );
+      return res.status(error.statusCode).json(error.toJSON());
     }
 
     // Verify token is valid (either active or pending)
@@ -57,7 +76,11 @@ function register(app, redis) {
     const isPendingToken = state.pendingSessionTokens.has(token);
 
     if (!isActiveToken && !isPendingToken) {
-      return res.status(401).json({ error: 'Invalid token' });
+      const error = new AuthError(
+        ErrorCodes.INVALID_TOKEN,
+        'Invalid token'
+      );
+      return res.status(error.statusCode).json(error.toJSON());
     }
 
     // Set secure cookie
@@ -93,16 +116,28 @@ function register(app, redis) {
     const rateLimit = checkInviteRateLimit(clientIp);
     if (!rateLimit.allowed) {
       console.log(`Invite validation rate limit exceeded for ${clientIp}`);
-      return res.status(429).json({
+      const error = new RateLimitError(
+        ErrorCodes.RATE_LIMITED_INVITE,
+        `Too many attempts. Please try again in ${Math.ceil(rateLimit.retryAfter / 60)} minutes.`,
+        { retryAfter: rateLimit.retryAfter, reason: 'rate_limited' }
+      );
+      return res.status(error.statusCode).json({
         valid: false,
-        reason: 'rate_limited',
-        message: `Too many attempts. Please try again in ${Math.ceil(rateLimit.retryAfter / 60)} minutes.`
+        ...error.toJSON()
       });
     }
 
     if (!token) {
       recordFailedInviteAttempt(clientIp);
-      return res.status(401).json({ valid: false, reason: 'missing', message: 'Invite token required' });
+      const error = new AuthError(
+        ErrorCodes.INVITE_MISSING,
+        'Invite token required',
+        { reason: 'missing' }
+      );
+      return res.status(error.statusCode).json({
+        valid: false,
+        ...error.toJSON()
+      });
     }
 
     const validation = await validateInvite(redis, token, clientIp);
@@ -112,7 +147,26 @@ function register(app, redis) {
     } else {
       // Record failed attempt for rate limiting
       recordFailedInviteAttempt(clientIp);
-      res.status(401).json({ valid: false, reason: validation.reason, message: validation.message });
+
+      // Map validation reason to error code
+      const codeMap = {
+        invalid: ErrorCodes.INVITE_INVALID,
+        not_found: ErrorCodes.INVITE_NOT_FOUND,
+        expired: ErrorCodes.INVITE_EXPIRED,
+        used: ErrorCodes.INVITE_USED,
+        revoked: ErrorCodes.INVITE_REVOKED,
+      };
+      const errorCode = codeMap[validation.reason] || ErrorCodes.INVITE_INVALID;
+
+      const error = new AuthError(
+        errorCode,
+        validation.message,
+        { reason: validation.reason }
+      );
+      res.status(error.statusCode).json({
+        valid: false,
+        ...error.toJSON()
+      });
     }
   });
 }

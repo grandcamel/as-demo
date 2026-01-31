@@ -41,7 +41,8 @@ describe('session routes', () => {
       '../../routes/session',
       '../../services/state',
       '../../services/invite',
-      '../../config'
+      '../../config',
+      '../../errors'
     ].map(p => {
       try { return require.resolve(p); } catch { return null; }
     }).filter(Boolean);
@@ -142,15 +143,19 @@ describe('session routes', () => {
       mockRes = {
         status: vi.fn().mockReturnThis(),
         send: vi.fn(),
+        json: vi.fn(),
         set: vi.fn()
       };
     });
 
-    it('should return 401 when no session cookie', () => {
+    it('should return 401 with error code when no session cookie', () => {
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.send).toHaveBeenCalledWith('No session cookie');
+      expect(mockRes.json).toHaveBeenCalledWith({
+        code: 'ERR_NO_SESSION_COOKIE',
+        message: 'No session cookie'
+      });
     });
 
     it('should return 200 for valid active session token', () => {
@@ -161,7 +166,7 @@ describe('session routes', () => {
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith('OK');
+      expect(mockRes.json).toHaveBeenCalledWith({ valid: true });
       expect(mockRes.set).toHaveBeenCalledWith('X-Grafana-User', 'demo-session-');
     });
 
@@ -172,17 +177,20 @@ describe('session routes', () => {
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.send).toHaveBeenCalledWith('OK');
+      expect(mockRes.json).toHaveBeenCalledWith({ valid: true });
       expect(mockRes.set).toHaveBeenCalledWith('X-Grafana-User', 'demo-client-1');
     });
 
-    it('should return 401 for invalid token', () => {
+    it('should return 401 with error code for invalid token', () => {
       mockReq.cookies.demo_session = 'invalid-token';
 
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.send).toHaveBeenCalledWith('Session not active');
+      expect(mockRes.json).toHaveBeenCalledWith({
+        code: 'ERR_SESSION_NOT_ACTIVE',
+        message: 'Session not active'
+      });
     });
 
     it('should clean up stale session token', () => {
@@ -213,29 +221,40 @@ describe('session routes', () => {
       };
     });
 
-    it('should return 400 when token missing', () => {
+    it('should return 400 with error code when token missing', () => {
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Token required' });
+      expect(mockRes.json).toHaveBeenCalledWith({
+        code: 'ERR_INVALID_INPUT',
+        message: 'Token required',
+        details: { field: 'token' }
+      });
     });
 
-    it('should return 400 when token is not string', () => {
+    it('should return 400 with error code when token is not string', () => {
       mockReq.body.token = 12345;
 
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Token required' });
+      expect(mockRes.json).toHaveBeenCalledWith({
+        code: 'ERR_INVALID_INPUT',
+        message: 'Token required',
+        details: { field: 'token' }
+      });
     });
 
-    it('should return 401 for invalid token', () => {
+    it('should return 401 with error code for invalid token', () => {
       mockReq.body.token = 'invalid-token';
 
       handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid token' });
+      expect(mockRes.json).toHaveBeenCalledWith({
+        code: 'ERR_INVALID_TOKEN',
+        message: 'Invalid token'
+      });
     });
 
     it('should set cookie for valid active token', () => {
@@ -310,7 +329,7 @@ describe('session routes', () => {
       };
     });
 
-    it('should return 429 when rate limited', async () => {
+    it('should return 429 with error code when rate limited', async () => {
       invite.checkInviteRateLimit.mockReturnValue({ allowed: false, retryAfter: 3600 });
 
       await handler(mockReq, mockRes);
@@ -318,19 +337,21 @@ describe('session routes', () => {
       expect(mockRes.status).toHaveBeenCalledWith(429);
       expect(mockRes.json).toHaveBeenCalledWith({
         valid: false,
-        reason: 'rate_limited',
-        message: expect.stringContaining('Too many attempts')
+        code: 'ERR_RATE_LIMITED_INVITE',
+        message: expect.stringContaining('Too many attempts'),
+        details: { retryAfter: 3600, reason: 'rate_limited' }
       });
     });
 
-    it('should return 401 when token missing', async () => {
+    it('should return 401 with error code when token missing', async () => {
       await handler(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         valid: false,
-        reason: 'missing',
-        message: 'Invite token required'
+        code: 'ERR_INVITE_MISSING',
+        message: 'Invite token required',
+        details: { reason: 'missing' }
       });
       expect(invite.recordFailedInviteAttempt).toHaveBeenCalled();
     });
@@ -373,7 +394,7 @@ describe('session routes', () => {
       expect(mockRes.json).toHaveBeenCalledWith({ valid: true });
     });
 
-    it('should return 401 for invalid invite', async () => {
+    it('should return 401 with error code for expired invite', async () => {
       mockReq.headers['x-invite-token'] = 'invalid-token';
       invite.validateInvite.mockResolvedValue({
         valid: false,
@@ -386,10 +407,102 @@ describe('session routes', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         valid: false,
-        reason: 'expired',
-        message: 'Invite has expired'
+        code: 'ERR_INVITE_EXPIRED',
+        message: 'Invite has expired',
+        details: { reason: 'expired' }
       });
       expect(invite.recordFailedInviteAttempt).toHaveBeenCalled();
+    });
+
+    it('should return 401 with error code for used invite', async () => {
+      mockReq.headers['x-invite-token'] = 'used-token';
+      invite.validateInvite.mockResolvedValue({
+        valid: false,
+        reason: 'used',
+        message: 'Invite already used'
+      });
+
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        valid: false,
+        code: 'ERR_INVITE_USED',
+        message: 'Invite already used',
+        details: { reason: 'used' }
+      });
+    });
+
+    it('should return 401 with error code for revoked invite', async () => {
+      mockReq.headers['x-invite-token'] = 'revoked-token';
+      invite.validateInvite.mockResolvedValue({
+        valid: false,
+        reason: 'revoked',
+        message: 'Invite has been revoked'
+      });
+
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        valid: false,
+        code: 'ERR_INVITE_REVOKED',
+        message: 'Invite has been revoked',
+        details: { reason: 'revoked' }
+      });
+    });
+
+    it('should return 401 with error code for not found invite', async () => {
+      mockReq.headers['x-invite-token'] = 'nonexistent-token';
+      invite.validateInvite.mockResolvedValue({
+        valid: false,
+        reason: 'not_found',
+        message: 'Invite not found'
+      });
+
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        valid: false,
+        code: 'ERR_INVITE_NOT_FOUND',
+        message: 'Invite not found',
+        details: { reason: 'not_found' }
+      });
+    });
+
+    it('should return 401 with error code for invalid format invite', async () => {
+      mockReq.headers['x-invite-token'] = 'bad-format';
+      invite.validateInvite.mockResolvedValue({
+        valid: false,
+        reason: 'invalid',
+        message: 'Invalid invite format'
+      });
+
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        valid: false,
+        code: 'ERR_INVITE_INVALID',
+        message: 'Invalid invite format',
+        details: { reason: 'invalid' }
+      });
+    });
+
+    it('should fallback to INVITE_INVALID for unknown validation reason', async () => {
+      mockReq.headers['x-invite-token'] = 'unknown-reason';
+      invite.validateInvite.mockResolvedValue({
+        valid: false,
+        reason: 'some_unknown_reason',
+        message: 'Unknown error occurred'
+      });
+
+      await handler(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        valid: false,
+        code: 'ERR_INVITE_INVALID',
+        message: 'Unknown error occurred',
+        details: { reason: 'some_unknown_reason' }
+      });
     });
 
     it('should use x-forwarded-for for IP', async () => {

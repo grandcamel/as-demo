@@ -250,7 +250,7 @@ describe('websocket handler', () => {
 
       handler(mockWs, mockReq);
 
-      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('Rate limit exceeded'));
+      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('ERR_RATE_LIMITED_CONNECTION'));
     });
 
     it('should reject connection with invalid origin', () => {
@@ -264,7 +264,7 @@ describe('websocket handler', () => {
 
       connectionHandler(mockWs, mockReq);
 
-      expect(mockWs.close).toHaveBeenCalledWith(1008, 'Origin not allowed');
+      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('ERR_ORIGIN_NOT_ALLOWED'));
     });
 
     it('should reject connection without origin in production', () => {
@@ -278,7 +278,7 @@ describe('websocket handler', () => {
 
       connectionHandler(mockWs, mockReq);
 
-      expect(mockWs.close).toHaveBeenCalledWith(1008, 'Origin header required');
+      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('ERR_ORIGIN_REQUIRED'));
 
       process.env.NODE_ENV = originalEnv;
     });

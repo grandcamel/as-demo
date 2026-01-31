@@ -25,6 +25,7 @@ const {
 } = require('../config/metrics');
 const state = require('./state');
 const { recordInviteUsage } = require('./invite');
+const { ErrorCodes, formatWsError } = require('../errors');
 
 /**
  * Generate a session token.
@@ -325,7 +326,10 @@ async function startSession(redis, ws, client, processQueue) {
     console.error('Failed to start session:', err);
     span?.recordException(err);
     span?.end();
-    ws.send(JSON.stringify({ type: 'error', message: 'Failed to start demo session' }));
+    ws.send(formatWsError(
+      ErrorCodes.SESSION_START_FAILED,
+      'Failed to start demo session'
+    ));
     client.state = 'connected';
 
     // Clean up env file if it was created

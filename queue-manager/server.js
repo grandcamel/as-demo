@@ -18,7 +18,7 @@
  *     { type: "session_warning", minutes_remaining: 5 }
  *     { type: "session_ended", reason: "timeout" | "disconnected" | "error" }
  *     { type: "invite_invalid", reason: "not_found" | "expired" | "used" | "revoked", message: "..." }
- *     { type: "error", message: "..." }
+ *     { type: "error", code: "ERR_...", message: "..." }
  */
 
 const express = require('express');
@@ -37,6 +37,9 @@ const state = require('./services/state');
 const { processQueue } = require('./services/queue');
 const { endSession } = require('./services/session');
 const { cleanupRateLimits: cleanupInviteRateLimits } = require('./services/invite');
+
+// Error handling
+const { ContentTypeError, errorHandler } = require('./errors');
 
 // Routes
 const healthRoutes = require('./routes/health');
@@ -78,7 +81,8 @@ app.use((req, res, next) => {
     const contentType = req.headers['content-type'];
     const hasBody = req.headers['content-length'] && req.headers['content-length'] !== '0';
     if (hasBody && (!contentType || !contentType.includes('application/json'))) {
-      return res.status(415).json({ error: 'Content-Type must be application/json' });
+      const error = new ContentTypeError();
+      return res.status(error.statusCode).json(error.toJSON());
     }
   }
   next();
@@ -111,6 +115,9 @@ scenarioRoutes.register(app);
 
 // Set up WebSocket handlers
 websocketHandlers.setup(wss, redis);
+
+// Error handler middleware (must be after routes)
+app.use(errorHandler);
 
 // Validate SESSION_SECRET in production
 if (config.SESSION_SECRET === 'change-me-in-production') {

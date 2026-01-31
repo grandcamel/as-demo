@@ -6,6 +6,7 @@ const config = require('../config');
 const state = require('./state');
 const { validateInvite } = require('./invite');
 const { generateSessionToken, startSession, findClientWs } = require('./session');
+const { ErrorCodes, formatWsError } = require('../errors');
 
 /**
  * Join the queue.
@@ -24,7 +25,10 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
 
     // Atomically acquire reconnection lock to prevent TOCTOU race condition
     if (!state.tryAcquireReconnectionLock()) {
-      sendError(ws, 'Reconnection already in progress');
+      ws.send(formatWsError(
+        ErrorCodes.RECONNECTION_IN_PROGRESS,
+        'Reconnection already in progress'
+      ));
       return;
     }
     try {
@@ -66,7 +70,10 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
 
   // Check if already in queue
   if (state.queue.includes(client.id)) {
-    sendError(ws, 'Already in queue');
+    ws.send(formatWsError(
+      ErrorCodes.ALREADY_IN_QUEUE,
+      'Already in queue'
+    ));
     return;
   }
 
@@ -74,8 +81,19 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
   if (inviteToken) {
     const validation = await validateInvite(redis, inviteToken, client.ip);
     if (!validation.valid) {
+      // Map validation reason to error code for invite_invalid message
+      const codeMap = {
+        invalid: ErrorCodes.INVITE_INVALID,
+        not_found: ErrorCodes.INVITE_NOT_FOUND,
+        expired: ErrorCodes.INVITE_EXPIRED,
+        used: ErrorCodes.INVITE_USED,
+        revoked: ErrorCodes.INVITE_REVOKED,
+      };
+      const errorCode = codeMap[validation.reason] || ErrorCodes.INVITE_INVALID;
+
       ws.send(JSON.stringify({
         type: 'invite_invalid',
+        code: errorCode,
         reason: validation.reason,
         message: validation.message
       }));
@@ -90,6 +108,7 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
   if (state.queue.length >= config.MAX_QUEUE_SIZE) {
     ws.send(JSON.stringify({
       type: 'queue_full',
+      code: ErrorCodes.QUEUE_FULL,
       message: 'Queue is full. Please try again later.'
     }));
     return;
@@ -192,15 +211,6 @@ function processQueue(redis) {
     state.queue.shift();
     processQueue(redis);
   }
-}
-
-/**
- * Send error message to client.
- * @param {WebSocket} ws - WebSocket connection
- * @param {string} message - Error message
- */
-function sendError(ws, message) {
-  ws.send(JSON.stringify({ type: 'error', message }));
 }
 
 module.exports = {
