@@ -2,33 +2,72 @@
  * Tests for config/metrics.js
  */
 
-jest.mock('@demo-platform/queue-manager-core', () => ({
-  createMetrics: jest.fn(() => ({
-    getTracer: jest.fn(() => 'mock-tracer'),
-    sessionsStarted: 'mock-sessionsStarted',
-    sessionsEnded: 'mock-sessionsEnded',
-    sessionDuration: 'mock-sessionDuration',
-    queueWait: 'mock-queueWait',
-    ttydSpawn: 'mock-ttydSpawn',
-    invitesValidated: 'mock-invitesValidated',
-    sandboxCleanup: 'mock-sandboxCleanup'
-  }))
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+// Create mock for createMetrics
+const mockCreateMetrics = vi.fn(() => ({
+  getTracer: vi.fn(() => 'mock-tracer'),
+  sessionsStarted: 'mock-sessionsStarted',
+  sessionsEnded: 'mock-sessionsEnded',
+  sessionDuration: 'mock-sessionDuration',
+  queueWait: 'mock-queueWait',
+  ttydSpawn: 'mock-ttydSpawn',
+  invitesValidated: 'mock-invitesValidated',
+  sandboxCleanup: 'mock-sandboxCleanup'
 }));
+
+const mockCore = {
+  createMetrics: mockCreateMetrics
+};
+
+// Helper to get a fresh metrics module with the mock injected
+function getFreshMetricsModule() {
+  // Clear require cache for our module
+  const metricsPath = require.resolve('../../config/metrics');
+  const corePath = require.resolve('@demo-platform/queue-manager-core');
+  delete require.cache[metricsPath];
+
+  // Mock the core module
+  require.cache[corePath] = {
+    id: corePath,
+    filename: corePath,
+    loaded: true,
+    exports: mockCore
+  };
+
+  return require('../../config/metrics');
+}
 
 describe('metrics config', () => {
   let metrics;
   let createMetrics;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.clearAllMocks();
+
+    // Reset the mock implementation
+    mockCreateMetrics.mockImplementation(() => ({
+      getTracer: vi.fn(() => 'mock-tracer'),
+      sessionsStarted: 'mock-sessionsStarted',
+      sessionsEnded: 'mock-sessionsEnded',
+      sessionDuration: 'mock-sessionDuration',
+      queueWait: 'mock-queueWait',
+      ttydSpawn: 'mock-ttydSpawn',
+      invitesValidated: 'mock-invitesValidated',
+      sandboxCleanup: 'mock-sandboxCleanup'
+    }));
+
+    metrics = getFreshMetricsModule();
     createMetrics = require('@demo-platform/queue-manager-core').createMetrics;
-    metrics = require('../../config/metrics');
   });
 
   describe('initMetrics', () => {
     it('should call createMetrics with correct options', () => {
-      const getQueueLength = jest.fn(() => 5);
-      const getActiveSessionCount = jest.fn(() => 1);
+      const getQueueLength = vi.fn(() => 5);
+      const getActiveSessionCount = vi.fn(() => 1);
 
       metrics.initMetrics(getQueueLength, getActiveSessionCount);
 
@@ -42,14 +81,13 @@ describe('metrics config', () => {
 
   describe('getTracer', () => {
     it('should return null before initMetrics called', () => {
-      jest.resetModules();
-      const freshMetrics = require('../../config/metrics');
+      const freshMetrics = getFreshMetricsModule();
 
       expect(freshMetrics.getTracer()).toBeNull();
     });
 
     it('should return tracer after initMetrics called', () => {
-      metrics.initMetrics(jest.fn(), jest.fn());
+      metrics.initMetrics(vi.fn(), vi.fn());
 
       expect(metrics.getTracer()).toBe('mock-tracer');
     });
@@ -57,7 +95,7 @@ describe('metrics config', () => {
 
   describe('metric getters', () => {
     beforeEach(() => {
-      metrics.initMetrics(jest.fn(), jest.fn());
+      metrics.initMetrics(vi.fn(), vi.fn());
     });
 
     it('should expose sessionsStartedCounter', () => {
@@ -91,8 +129,7 @@ describe('metrics config', () => {
 
   describe('metric getters before init', () => {
     it('should return undefined for metrics before init', () => {
-      jest.resetModules();
-      const freshMetrics = require('../../config/metrics');
+      const freshMetrics = getFreshMetricsModule();
 
       expect(freshMetrics.sessionsStartedCounter).toBeUndefined();
       expect(freshMetrics.sessionsEndedCounter).toBeUndefined();

@@ -2,11 +2,18 @@
  * Tests for config/platforms/splunk.js
  */
 
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 describe('splunk platform config', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    // Clear module cache to get fresh config with new env vars
+    const modulePath = require.resolve('../../../config/platforms/splunk');
+    delete require.cache[modulePath];
     process.env = { ...originalEnv };
   });
 

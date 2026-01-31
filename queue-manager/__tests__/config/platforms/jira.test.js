@@ -2,11 +2,18 @@
  * Tests for config/platforms/jira.js
  */
 
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 describe('jira platform config', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    // Clear module cache to get fresh config with new env vars
+    const modulePath = require.resolve('../../../config/platforms/jira');
+    delete require.cache[modulePath];
     process.env = { ...originalEnv };
   });
 
