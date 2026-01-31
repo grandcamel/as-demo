@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Secure session environment file management.
  *

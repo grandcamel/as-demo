@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Session token utilities for demo platform queue managers.
  *

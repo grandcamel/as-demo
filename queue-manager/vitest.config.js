@@ -18,21 +18,35 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'html'],
       reportsDirectory: 'coverage',
       exclude: ['node_modules/', '__tests__/', 'coverage/', '*.config.js'],
-      // Disable thresholds until tests are fully migrated
-      // thresholds: {
-      //   './lib/': {
-      //     branches: 90,
-      //     functions: 95,
-      //     lines: 95,
-      //     statements: 95,
-      //   },
-      //   global: {
-      //     branches: 70,
-      //     functions: 70,
-      //     lines: 70,
-      //     statements: 70,
-      //   },
-      // },
+      thresholds: {
+        // Per-file thresholds for well-tested utility code (100% coverage)
+        'lib/rate-limit.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'lib/env-file.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'lib/session.js': { lines: 95, functions: 100, branches: 95, statements: 95 },
+
+        // Config platforms are 100% covered
+        'config/platforms/confluence.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/platforms/jira.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/platforms/splunk.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/cross-platform.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/metrics.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/schema.js': { lines: 95, functions: 50, branches: 100, statements: 95 },
+
+        // Routes are well tested
+        'routes/session.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'routes/scenarios.js': { lines: 100, functions: 100, branches: 90, statements: 100 },
+        'routes/health.js': { lines: 85, functions: 100, branches: 100, statements: 85 },
+
+        // Handlers have good coverage
+        'handlers/websocket.js': { lines: 95, functions: 85, branches: 90, statements: 95 },
+
+        // Services with tests
+        'services/state.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+
+        // Note: Global thresholds not set due to untested integration files
+        // (instrumentation.js, server.js, lib/index.js, lib/metrics.js, services/invite|queue|session.js)
+        // Add integration tests for these before enabling global thresholds
+      },
     },
     clearMocks: true,
     restoreMocks: true,

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Zod schemas for environment configuration validation.
  *

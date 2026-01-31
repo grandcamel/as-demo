@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Rate limiting utilities for demo platform queue managers.
  *
