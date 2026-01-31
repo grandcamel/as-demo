@@ -29,6 +29,9 @@ services:
   lgtm:
     ports:
       - "3001:3000"  # Grafana UI for direct access
+      - "3100:3100"  # Loki HTTP API (for local telemetry queries)
+      - "4317:4317"  # OTLP gRPC (for local telemetry export)
+      - "4318:4318"  # OTLP HTTP (for local telemetry export)
 
   splunk:
     profiles: ["splunk", "full"]
