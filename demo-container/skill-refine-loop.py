@@ -6,6 +6,10 @@ Multi-platform support for Confluence, JIRA, Splunk, and cross-platform scenario
 Runs skill tests, collects failures, invokes a fix agent to make changes,
 then re-tests until all pass or max attempts reached.
 
+Telemetry:
+    - Traces: refine.run (parent span), refine.attempt (per-attempt spans)
+    - Logs: refine_start, refine_attempt, refine_fix_applied, refine_complete
+
 Usage:
     python skill-refine-loop.py --scenario page --platform confluence
     python skill-refine-loop.py --scenario issue --platform jira
@@ -15,12 +19,87 @@ Usage:
 """
 
 import argparse
+import atexit
 import json
 import os
 import re
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Optional
+
+# =============================================================================
+# Telemetry Setup
+# =============================================================================
+
+# Add script directory to path for otel_setup import (when running in container)
+sys.path.insert(0, "/workspace")
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+
+try:
+    from otel_setup import (
+        init_telemetry,
+        shutdown_telemetry,
+        log_to_loki,
+        get_tracer,
+        OTEL_AVAILABLE,
+    )
+    if OTEL_AVAILABLE:
+        from opentelemetry.trace import Status, StatusCode
+except ImportError:
+    # Fallback if otel_setup not available
+    OTEL_AVAILABLE = False
+
+    def init_telemetry(*args, **kwargs):
+        return None
+
+    def shutdown_telemetry():
+        pass
+
+    def log_to_loki(*args, **kwargs):
+        pass
+
+    def get_tracer():
+        return None
+
+
+@contextmanager
+def trace_span(
+    name: str,
+    attributes: Optional[dict] = None,
+    record_exception: bool = True,
+):
+    """Context manager for creating trace spans with timing."""
+    start_time = time.time()
+    _tracer = get_tracer()
+
+    if _tracer is None:
+        yield None
+        return
+
+    with _tracer.start_as_current_span(name) as span:
+        if attributes:
+            for key, value in attributes.items():
+                if value is not None:
+                    if isinstance(value, (int, float, bool)):
+                        span.set_attribute(key, value)
+                    else:
+                        span.set_attribute(key, str(value))
+        try:
+            yield span
+            if OTEL_AVAILABLE:
+                span.set_status(Status(StatusCode.OK))
+        except Exception as e:
+            if OTEL_AVAILABLE:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                if record_exception:
+                    span.record_exception(e)
+            raise
+        finally:
+            duration_ms = (time.time() - start_time) * 1000
+            span.set_attribute("duration_ms", duration_ms)
 
 # =============================================================================
 # Configuration
@@ -518,6 +597,8 @@ def run_refinement_loop(
 
     Returns: True if all tests pass, False otherwise
     """
+    loop_start_time = time.time()
+
     print(f"{'=' * 70}")
     print("SKILL REFINEMENT LOOP (with checkpoint-based iteration)")
     print(f"{'=' * 70}")
@@ -534,96 +615,201 @@ def run_refinement_loop(
     print(f"{'=' * 70}")
     print()
 
+    # Log refinement start
+    log_to_loki(
+        f"Starting refinement loop: {platform}/{scenario}",
+        level="info",
+        labels={"platform": platform, "scenario": scenario},
+        extra={
+            "event": "refine_start",
+            "scenario": scenario,
+            "platform": platform,
+            "max_attempts": max_attempts,
+            "model": model,
+            "judge_model": judge_model,
+            "mock_mode": mock_mode,
+        },
+    )
+
     # State for checkpoint-based iteration
     checkpoint_file = f"/tmp/checkpoints/{platform}_{scenario}.json"
     fix_session_id: str | None = None
     attempt_history: list[dict] = []
     last_failing_prompt_index: int | None = None
+    success = False
 
-    for attempt in range(1, max_attempts + 1):
-        print(f"[Attempt {attempt}/{max_attempts}]")
-        print("-" * 40)
+    with trace_span(
+        "refine.run",
+        attributes={
+            "scenario": scenario,
+            "platform": platform,
+            "max_attempts": max_attempts,
+            "model": model,
+            "judge_model": judge_model,
+            "mock_mode": mock_mode,
+        },
+    ) as run_span:
+        for attempt in range(1, max_attempts + 1):
+            attempt_start_time = time.time()
+            print(f"[Attempt {attempt}/{max_attempts}]")
+            print("-" * 40)
 
-        # Determine if we should fork from checkpoint
-        fork_from: int | None = None
-        prompt_index: int | None = None
+            # Determine if we should fork from checkpoint
+            fork_from: int | None = None
+            prompt_index: int | None = None
 
-        if attempt > 1 and last_failing_prompt_index is not None:
-            if last_failing_prompt_index > 0:
-                fork_from = last_failing_prompt_index - 1
-                prompt_index = last_failing_prompt_index
-                print(f"Forking from checkpoint {fork_from}, running prompt {prompt_index}")
-            else:
-                prompt_index = 0
-                print("First prompt failed, running from start")
+            if attempt > 1 and last_failing_prompt_index is not None:
+                if last_failing_prompt_index > 0:
+                    fork_from = last_failing_prompt_index - 1
+                    prompt_index = last_failing_prompt_index
+                    print(f"Forking from checkpoint {fork_from}, running prompt {prompt_index}")
+                else:
+                    prompt_index = 0
+                    print("First prompt failed, running from start")
 
-        # Run test with fix context output
-        all_passed, fix_ctx = run_skill_test(
-            scenario=scenario,
-            platform=platform,
-            model=model,
-            judge_model=judge_model,
-            fix_context=True,
-            verbose=verbose,
-            conversation=True,
-            fail_fast=True,
-            checkpoint_file=checkpoint_file,
-            fork_from=fork_from,
-            prompt_index=prompt_index,
-            mock_mode=mock_mode,
-        )
+            # Log attempt start
+            log_to_loki(
+                f"Refinement attempt {attempt}/{max_attempts}",
+                level="info",
+                labels={"platform": platform, "scenario": scenario, "attempt": str(attempt)},
+                extra={
+                    "event": "refine_attempt",
+                    "attempt": attempt,
+                    "max_attempts": max_attempts,
+                    "fork_from": fork_from,
+                    "prompt_index": prompt_index,
+                },
+            )
 
-        if all_passed:
-            print()
-            print(f"{'=' * 70}")
-            print(f"SUCCESS: All tests passed on attempt {attempt}")
-            print(f"{'=' * 70}")
-            return True
+            with trace_span(
+                "refine.attempt",
+                attributes={
+                    "attempt": attempt,
+                    "fork_from": fork_from,
+                    "prompt_index": prompt_index,
+                },
+            ) as attempt_span:
+                # Run test with fix context output
+                all_passed, fix_ctx = run_skill_test(
+                    scenario=scenario,
+                    platform=platform,
+                    model=model,
+                    judge_model=judge_model,
+                    fix_context=True,
+                    verbose=verbose,
+                    conversation=True,
+                    fail_fast=True,
+                    checkpoint_file=checkpoint_file,
+                    fork_from=fork_from,
+                    prompt_index=prompt_index,
+                    mock_mode=mock_mode,
+                )
 
-        if not fix_ctx:
-            print("Error: Test failed but no fix context available")
-            continue
+                if all_passed:
+                    print()
+                    print(f"{'=' * 70}")
+                    print(f"SUCCESS: All tests passed on attempt {attempt}")
+                    print(f"{'=' * 70}")
 
-        failure = fix_ctx.get("failure", {})
-        last_failing_prompt_index = failure.get("prompt_index")
-        print(f"Failed at prompt {last_failing_prompt_index}: {failure.get('prompt_text', 'unknown')[:60]}...")
-        print(f"Quality: {failure.get('quality', 'unknown')}")
-        print(f"Refinement suggestion: {failure.get('refinement_suggestion', 'none')[:100]}...")
-        print()
+                    if attempt_span:
+                        attempt_span.set_attribute("result", "success")
 
-        # Run fix agent with session continuity
-        print("Running fix agent...")
-        if fix_session_id:
-            print(f"Continuing fix session: {fix_session_id[:20]}...")
-        fix_result = run_fix_agent(
-            fix_ctx,
-            platform,
-            verbose=verbose,
-            session_id=fix_session_id,
-            attempt_history=attempt_history,
-        )
+                    success = True
+                    break
 
-        fix_session_id = fix_result.get("session_id", fix_session_id)
+                if not fix_ctx:
+                    print("Error: Test failed but no fix context available")
+                    if attempt_span:
+                        attempt_span.set_attribute("result", "no_context")
+                    continue
 
-        attempt_history.append({
-            "attempt": attempt,
-            "files": fix_result["files_changed"],
-            "result": "still failing",
-            "error_summary": failure.get('refinement_suggestion', '')[:100],
-        })
+                failure = fix_ctx.get("failure", {})
+                last_failing_prompt_index = failure.get("prompt_index")
+                print(f"Failed at prompt {last_failing_prompt_index}: {failure.get('prompt_text', 'unknown')[:60]}...")
+                print(f"Quality: {failure.get('quality', 'unknown')}")
+                print(f"Refinement suggestion: {failure.get('refinement_suggestion', 'none')[:100]}...")
+                print()
 
-        if fix_result["files_changed"]:
-            print(f"Files changed: {fix_result['files_changed']}")
-        else:
-            print("No files changed (fix may have failed)")
+                if attempt_span:
+                    attempt_span.set_attribute("failed_prompt", last_failing_prompt_index)
+                    attempt_span.set_attribute("quality", failure.get('quality', 'unknown'))
 
-        print(f"Summary: {fix_result['summary'][:200]}...")
-        print()
+                # Run fix agent with session continuity
+                print("Running fix agent...")
+                if fix_session_id:
+                    print(f"Continuing fix session: {fix_session_id[:20]}...")
+                fix_result = run_fix_agent(
+                    fix_ctx,
+                    platform,
+                    verbose=verbose,
+                    session_id=fix_session_id,
+                    attempt_history=attempt_history,
+                )
 
-    print(f"{'=' * 70}")
-    print(f"FAILED: Max attempts ({max_attempts}) reached without passing all tests")
-    print(f"{'=' * 70}")
-    return False
+                fix_session_id = fix_result.get("session_id", fix_session_id)
+
+                attempt_history.append({
+                    "attempt": attempt,
+                    "files": fix_result["files_changed"],
+                    "result": "still failing",
+                    "error_summary": failure.get('refinement_suggestion', '')[:100],
+                })
+
+                files_changed = fix_result["files_changed"]
+                if files_changed:
+                    print(f"Files changed: {files_changed}")
+
+                    # Log fix applied
+                    log_to_loki(
+                        f"Fix applied in attempt {attempt}",
+                        level="info",
+                        labels={"platform": platform, "scenario": scenario, "attempt": str(attempt)},
+                        extra={
+                            "event": "refine_fix_applied",
+                            "attempt": attempt,
+                            "files_changed": files_changed,
+                            "failed_prompt": last_failing_prompt_index,
+                            "quality": failure.get('quality', 'unknown'),
+                        },
+                    )
+                else:
+                    print("No files changed (fix may have failed)")
+
+                if attempt_span:
+                    attempt_span.set_attribute("files_changed", ",".join(files_changed) if files_changed else "none")
+                    attempt_span.set_attribute("result", "fix_applied" if files_changed else "no_fix")
+
+                print(f"Summary: {fix_result['summary'][:200]}...")
+                print()
+
+        # Update run span with final stats
+        loop_duration = time.time() - loop_start_time
+        if run_span:
+            run_span.set_attribute("success", success)
+            run_span.set_attribute("total_attempts", len(attempt_history) + (1 if success else 0))
+            run_span.set_attribute("total_duration_seconds", loop_duration)
+
+    # Log refinement complete
+    log_to_loki(
+        f"Refinement loop completed: {platform}/{scenario} - {'SUCCESS' if success else 'FAILED'}",
+        level="info" if success else "warning",
+        labels={"platform": platform, "scenario": scenario, "result": "success" if success else "failed"},
+        extra={
+            "event": "refine_complete",
+            "scenario": scenario,
+            "platform": platform,
+            "success": success,
+            "total_attempts": len(attempt_history) + (1 if success else 0),
+            "total_duration_seconds": loop_duration,
+        },
+    )
+
+    if not success:
+        print(f"{'=' * 70}")
+        print(f"FAILED: Max attempts ({max_attempts}) reached without passing all tests")
+        print(f"{'=' * 70}")
+
+    return success
 
 
 # =============================================================================
@@ -642,6 +828,10 @@ Examples:
     python skill-refine-loop.py --scenario sre --platform splunk
     python skill-refine-loop.py --scenario incident-response --platform cross-platform
     python skill-refine-loop.py --scenario page --platform confluence --max-attempts 5 --mock
+
+Telemetry (enabled by default):
+    - Traces: Sent to Tempo via OTLP (refine.run, refine.attempt spans)
+    - Logs: Sent to Loki (refine_start, refine_attempt, refine_fix_applied, refine_complete)
         """,
     )
     parser.add_argument("--scenario", required=True, help="Scenario name (e.g., page, issue, sre)")
@@ -657,7 +847,19 @@ Examples:
     parser.add_argument("--judge-model", default="opus", help="Model for LLM judge (default: opus)")
     parser.add_argument("--mock", action="store_true", help="Enable mock mode for testing")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--no-debug", action="store_true",
+                        help="Disable telemetry (traces and logs)")
     args = parser.parse_args()
+
+    # Initialize telemetry
+    scenario_name = f"{args.platform}_{args.scenario}"
+    init_telemetry(
+        service_name="skill-refine",
+        scenario=scenario_name,
+        debug=not args.no_debug,
+    )
+    # Register shutdown to ensure telemetry flushes on any exit path
+    atexit.register(shutdown_telemetry)
 
     # Validate skills paths for required platforms
     required_platforms = get_required_platforms(args.platform)
