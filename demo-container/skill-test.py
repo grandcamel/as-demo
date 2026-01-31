@@ -33,6 +33,8 @@ Fast Iteration with Checkpoints:
 """
 
 import argparse
+import atexit
+import fcntl
 import json
 import os
 import re
@@ -42,154 +44,47 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
-import requests
 import yaml  # type: ignore[import-untyped]
 
 # =============================================================================
-# Telemetry Setup
+# Telemetry Setup (imported from shared module)
 # =============================================================================
 
-# OpenTelemetry imports - optional dependency
-try:
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.trace import Status, StatusCode
+# Add /workspace to path for otel_setup import
+sys.path.insert(0, "/workspace")
 
-    OTEL_AVAILABLE = True
+try:
+    from otel_setup import (
+        init_telemetry,
+        shutdown_telemetry,
+        log_to_loki,
+        get_tracer,
+        OTEL_AVAILABLE,
+    )
+    if OTEL_AVAILABLE:
+        from opentelemetry.trace import Status, StatusCode
 except ImportError:
+    # Fallback if otel_setup not available
     OTEL_AVAILABLE = False
 
-# Module-level tracer and config
-_tracer: Any | None = None
-_loki_endpoint: str | None = None
-_debug_enabled: bool = True
-_scenario_name: str = "unknown"
-
-
-# Module-level provider for shutdown
-_trace_provider: Any | None = None
-
-
-def init_telemetry(
-    service_name: str = "skill-test",
-    scenario: str = "unknown",
-    debug: bool = True,
-) -> Any | None:
-    """Initialize OpenTelemetry tracing and Loki logging."""
-    global _tracer, _loki_endpoint, _debug_enabled, _scenario_name, _trace_provider
-
-    _debug_enabled = debug
-    _scenario_name = scenario
-
-    if not debug:
-        print("[OTEL] Debug mode disabled, telemetry off", file=sys.stderr)
+    def init_telemetry(*args, **kwargs):
         return None
 
-    # Configure endpoints
-    otel_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
-    _loki_endpoint = os.environ.get("LOKI_ENDPOINT", "http://localhost:3100")
+    def shutdown_telemetry():
+        pass
 
-    # For Docker containers, use host.docker.internal
-    if os.path.exists("/.dockerenv"):
-        otel_endpoint = os.environ.get(
-            "OTEL_EXPORTER_OTLP_ENDPOINT", "http://host.docker.internal:4318"
-        )
-        _loki_endpoint = os.environ.get(
-            "LOKI_ENDPOINT", "http://host.docker.internal:3100"
-        )
+    def log_to_loki(*args, **kwargs):
+        pass
 
-    # Initialize tracing if available
-    if OTEL_AVAILABLE:
-        try:
-            resource = Resource.create({
-                "service.name": service_name,
-                "service.version": "1.0.0",
-                "scenario": scenario,
-            })
-
-            _trace_provider = TracerProvider(resource=resource)
-            exporter = OTLPSpanExporter(endpoint=f"{otel_endpoint}/v1/traces")
-            _trace_provider.add_span_processor(BatchSpanProcessor(exporter))
-            trace.set_tracer_provider(_trace_provider)
-            _tracer = trace.get_tracer(service_name)
-
-            print(f"[OTEL] Tracing initialized -> {otel_endpoint}", file=sys.stderr)
-        except Exception as e:
-            print(f"[OTEL] Failed to initialize tracing: {e}", file=sys.stderr)
-            _tracer = None
-    else:
-        print("[OTEL] OpenTelemetry not installed, tracing disabled", file=sys.stderr)
-
-    print(f"[OTEL] Loki logging -> {_loki_endpoint}", file=sys.stderr)
-    return _tracer
-
-
-def shutdown_telemetry() -> None:
-    """Shutdown telemetry and flush all pending spans."""
-    global _trace_provider
-    if _trace_provider is not None:
-        try:
-            _trace_provider.force_flush(timeout_millis=5000)
-            _trace_provider.shutdown()
-            print("[OTEL] Telemetry shutdown complete", file=sys.stderr)
-        except Exception as e:
-            print(f"[OTEL] Shutdown error: {e}", file=sys.stderr)
-
-
-def log_to_loki(
-    message: str,
-    level: str = "info",
-    labels: dict | None = None,
-    extra: dict | None = None,
-) -> None:
-    """Send a log entry to Loki."""
-    if not _debug_enabled or not _loki_endpoint:
-        return
-
-    try:
-        timestamp_ns = str(int(time.time() * 1e9))
-
-        # Build log line with extra data
-        log_data = {"message": message, "level": level}
-        if extra:
-            log_data.update(extra)
-
-        log_line = json.dumps(log_data)
-
-        # Build stream labels
-        stream_labels = {
-            "job": "skill-test",
-            "scenario": _scenario_name,
-            "level": level,
-        }
-        if labels:
-            stream_labels.update(labels)
-
-        payload = {
-            "streams": [{
-                "stream": stream_labels,
-                "values": [[timestamp_ns, log_line]],
-            }]
-        }
-
-        # Fire and forget
-        requests.post(
-            f"{_loki_endpoint}/loki/api/v1/push",
-            json=payload,
-            timeout=2,
-        )
-    except Exception:
-        pass  # Don't fail tests due to logging issues
+    def get_tracer():
+        return None
 
 
 def _set_span_attribute(span, key: str, value) -> None:
     """Set a span attribute, converting to string if needed."""
-    if value is None:
+    if value is None or span is None:
         return
     if isinstance(value, (int, float, bool)):
         span.set_attribute(key, value)
@@ -200,11 +95,12 @@ def _set_span_attribute(span, key: str, value) -> None:
 @contextmanager
 def trace_span(
     name: str,
-    attributes: dict | None = None,
+    attributes: Optional[dict] = None,
     record_exception: bool = True,
 ):
     """Context manager for creating trace spans with timing."""
     start_time = time.time()
+    _tracer = get_tracer()
 
     if _tracer is None:
         yield None
@@ -216,11 +112,13 @@ def trace_span(
                 _set_span_attribute(span, key, value)
         try:
             yield span
-            span.set_status(Status(StatusCode.OK))
+            if OTEL_AVAILABLE:
+                span.set_status(Status(StatusCode.OK))
         except Exception as e:
-            span.set_status(Status(StatusCode.ERROR, str(e)))
-            if record_exception:
-                span.record_exception(e)
+            if OTEL_AVAILABLE:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                if record_exception:
+                    span.record_exception(e)
             raise
         finally:
             duration_ms = (time.time() - start_time) * 1000
@@ -228,8 +126,75 @@ def trace_span(
 
 
 # =============================================================================
-# Session Checkpoints
+# Session Checkpoints (with file locking for parallel safety)
 # =============================================================================
+
+
+@contextmanager
+def _checkpoint_lock(checkpoint_file: Path, exclusive: bool = False):
+    """
+    Context manager for checkpoint file locking.
+
+    Uses fcntl.flock for Unix file locking to prevent race conditions
+    when multiple parallel processes access the same checkpoint file.
+
+    Args:
+        checkpoint_file: Path to the checkpoint file
+        exclusive: If True, acquire exclusive (write) lock; otherwise shared (read) lock
+    """
+    # Use a lock file in /tmp to avoid race condition with directory creation.
+    # The lock file name is based on a hash of the checkpoint path to ensure
+    # uniqueness while avoiding path characters that are invalid in filenames.
+    import hashlib
+    lock_name = hashlib.md5(str(checkpoint_file).encode()).hexdigest()[:16]
+    lock_file = Path(f"/tmp/checkpoint_{lock_name}.lock")
+
+    lock_fd = None
+    try:
+        # Open lock file (this always succeeds since /tmp exists)
+        lock_fd = open(lock_file, "w")
+
+        # Acquire lock
+        lock_type = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        fcntl.flock(lock_fd.fileno(), lock_type)
+
+        # Now safe to create parent directory (we hold the lock)
+        checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+
+        yield
+    finally:
+        if lock_fd is not None:
+            try:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass  # Ignore unlock errors during cleanup
+            lock_fd.close()
+
+
+def _cleanup_old_lock_files(max_age_seconds: int = 3600) -> None:
+    """
+    Clean up old checkpoint lock files from /tmp.
+
+    Lock files older than max_age_seconds are removed. This is safe because
+    if a lock file is that old, no active process should be holding it.
+
+    Args:
+        max_age_seconds: Maximum age in seconds before a lock file is removed (default: 1 hour)
+    """
+    import glob
+
+    lock_pattern = "/tmp/checkpoint_*.lock"
+    current_time = time.time()
+
+    for lock_path in glob.glob(lock_pattern):
+        try:
+            stat = os.stat(lock_path)
+            age = current_time - stat.st_mtime
+            if age > max_age_seconds:
+                os.unlink(lock_path)
+        except OSError:
+            # File might have been deleted by another process
+            pass
 
 
 def _load_checkpoints_file(checkpoint_file: Path) -> dict:
@@ -238,26 +203,55 @@ def _load_checkpoints_file(checkpoint_file: Path) -> dict:
         return {}
     try:
         return json.loads(checkpoint_file.read_text())
-    except (OSError, json.JSONDecodeError):
+    except (json.JSONDecodeError, IOError):
         return {}
 
 
 def save_checkpoint(checkpoint_file: Path, prompt_index: int, session_id: str) -> None:
-    """Save a session checkpoint after a prompt completes."""
-    checkpoints = _load_checkpoints_file(checkpoint_file)
-    checkpoints[str(prompt_index)] = session_id
-    checkpoint_file.write_text(json.dumps(checkpoints, indent=2))
+    """Save a session checkpoint after a prompt completes (with exclusive lock)."""
+    with _checkpoint_lock(checkpoint_file, exclusive=True):
+        checkpoints = _load_checkpoints_file(checkpoint_file)
+        checkpoints[str(prompt_index)] = session_id
+        checkpoint_file.write_text(json.dumps(checkpoints, indent=2))
+
+    # Log checkpoint save event
+    log_to_loki(
+        f"Checkpoint saved for prompt {prompt_index}",
+        level="debug",
+        labels={"prompt_index": str(prompt_index)},
+        extra={
+            "event": "checkpoint_save",
+            "prompt_index": prompt_index,
+            "session_id": session_id[:16] if session_id else "",
+        },
+    )
 
 
-def load_checkpoint(checkpoint_file: Path, prompt_index: int) -> str | None:
-    """Load a session checkpoint for a specific prompt index."""
-    return _load_checkpoints_file(checkpoint_file).get(str(prompt_index))
+def load_checkpoint(checkpoint_file: Path, prompt_index: int) -> Optional[str]:
+    """Load a session checkpoint for a specific prompt index (with shared lock)."""
+    with _checkpoint_lock(checkpoint_file, exclusive=False):
+        session_id = _load_checkpoints_file(checkpoint_file).get(str(prompt_index))
+
+    if session_id:
+        log_to_loki(
+            f"Checkpoint loaded for prompt {prompt_index}",
+            level="debug",
+            labels={"prompt_index": str(prompt_index)},
+            extra={
+                "event": "checkpoint_load",
+                "prompt_index": prompt_index,
+                "session_id": session_id[:16] if session_id else "",
+            },
+        )
+
+    return session_id
 
 
 def list_checkpoints(checkpoint_file: Path) -> dict[int, str]:
-    """List all available checkpoints."""
-    checkpoints = _load_checkpoints_file(checkpoint_file)
-    return {int(k): v for k, v in checkpoints.items()}
+    """List all available checkpoints (with shared lock)."""
+    with _checkpoint_lock(checkpoint_file, exclusive=False):
+        checkpoints = _load_checkpoints_file(checkpoint_file)
+        return {int(k): v for k, v in checkpoints.items()}
 
 
 # =============================================================================
@@ -455,6 +449,19 @@ def run_claude_prompt(
             "prompt_preview": prompt[:100],
         },
     ) as span:
+        # P4: Log claude request start event
+        request_start_time = time.time()
+        log_to_loki(
+            f"Claude request starting for prompt {prompt_index}",
+            level="debug",
+            labels={"prompt_index": str(prompt_index)},
+            extra={
+                "event": "claude_request_start",
+                "prompt_index": prompt_index,
+                "model": model,
+            },
+        )
+
         try:
             result = subprocess.run(
                 cmd,
@@ -488,12 +495,26 @@ def run_claude_prompt(
 
         duration = time.time() - start_time
 
+        # P4: Log claude response received event
+        log_to_loki(
+            f"Claude response received for prompt {prompt_index}",
+            level="debug",
+            labels={"prompt_index": str(prompt_index)},
+            extra={
+                "event": "claude_response_received",
+                "prompt_index": prompt_index,
+                "duration_seconds": duration,
+                "exit_code": result.returncode,
+            },
+        )
+
         # Parse Claude Code's stream-json output format
         response_text = ""
         tools_called = []
         token_count = 0
         cost_usd = 0.0
         session_id = ""
+        tool_index = 0  # P4: Track tool index for timing
 
         for line in result.stdout.strip().split("\n"):
             if not line:
@@ -523,15 +544,18 @@ def run_claude_prompt(
                             input=block.get("input", {}),
                         )
                         tools_called.append(tool)
+                        tool_index = len(tools_called) - 1
 
-                        # Log each tool use
+                        # P4: Log tool execution start event
                         log_to_loki(
-                            f"Tool called: {tool.name}",
+                            f"Tool execution starting: {tool.name}",
                             level="debug",
                             labels={"prompt_index": str(prompt_index), "tool": tool.name},
                             extra={
-                                "event": "tool_use",
+                                "event": "tool_execution_start",
+                                "prompt_index": prompt_index,
                                 "tool_name": tool.name,
+                                "tool_index": tool_index,
                                 "tool_input": json.dumps(tool.input)[:500],
                             },
                         )
@@ -542,14 +566,16 @@ def run_claude_prompt(
                 if tools_called and tool_result:
                     tools_called[-1].output = str(tool_result.get("content", ""))[:500]
 
-                    # Log tool result
+                    # P4: Log tool execution end event
                     log_to_loki(
-                        f"Tool result for {tools_called[-1].name}",
+                        f"Tool execution completed: {tools_called[-1].name}",
                         level="debug",
                         labels={"prompt_index": str(prompt_index), "tool": tools_called[-1].name},
                         extra={
-                            "event": "tool_result",
+                            "event": "tool_execution_end",
+                            "prompt_index": prompt_index,
                             "tool_name": tools_called[-1].name,
+                            "tool_index": len(tools_called) - 1,
                             "result_preview": tools_called[-1].output[:200],
                         },
                     )
@@ -814,6 +840,19 @@ def run_llm_judge(
     if verbose:
         print(f"  Running judge with model: {model}")
 
+    # P3: Log full judge prompt for calibration debugging (separate event)
+    log_to_loki(
+        f"Judge prompt for prompt {result.spec.index}",
+        level="debug",
+        labels={"prompt_index": str(result.spec.index)},
+        extra={
+            "event": "judge_prompt",
+            "prompt_index": result.spec.index,
+            "judge_prompt_full": prompt[:8000],  # Larger limit for full context
+            "judge_prompt_length": len(prompt),
+        },
+    )
+
     cmd = [
         "claude",
         "-p", prompt,
@@ -824,12 +863,25 @@ def run_llm_judge(
 
     start_time = time.time()
 
+    # P4: Log judge request start event
+    log_to_loki(
+        f"Judge request starting for prompt {result.spec.index}",
+        level="debug",
+        labels={"prompt_index": str(result.spec.index)},
+        extra={
+            "event": "judge_request_start",
+            "prompt_index": result.spec.index,
+            "model": model,
+        },
+    )
+
     with trace_span(
         "llm.judge",
         attributes={
             "prompt_index": result.spec.index,
             "model": model,
             "tools_called": ",".join(tools_called),
+            "judge_prompt_length": len(prompt),
         },
     ) as span:
         try:
@@ -845,7 +897,7 @@ def run_llm_judge(
                 f"Judge failed for prompt {result.spec.index}: {e}",
                 level="error",
                 labels={"prompt_index": str(result.spec.index)},
-                extra={"event": "judge_error", "error": str(e)},
+                extra={"event": "judge_error", "error": str(e), "duration_seconds": duration},
             )
             if span:
                 span.set_attribute("error", str(e))
@@ -858,11 +910,36 @@ def run_llm_judge(
             }
 
         duration = time.time() - start_time
+        raw_output = proc.stdout.strip()
+
+        # P4: Log judge response received event
+        log_to_loki(
+            f"Judge response received for prompt {result.spec.index}",
+            level="debug",
+            labels={"prompt_index": str(result.spec.index)},
+            extra={
+                "event": "judge_response_received",
+                "prompt_index": result.spec.index,
+                "duration_seconds": duration,
+                "response_length": len(raw_output),
+            },
+        )
+
+        # P3: Log raw judge response before parsing (for debugging parse failures)
+        log_to_loki(
+            f"Judge raw response for prompt {result.spec.index}",
+            level="debug",
+            labels={"prompt_index": str(result.spec.index)},
+            extra={
+                "event": "judge_response_raw",
+                "prompt_index": result.spec.index,
+                "judge_response_raw": raw_output[:5000],  # Full raw response
+            },
+        )
 
         # Parse JSON response from text output
         try:
-            output = proc.stdout.strip()
-            json_text = _extract_json_from_output(output)
+            json_text = _extract_json_from_output(raw_output)
             judge_result = json.loads(json_text)
             parsed_result = {
                 "quality": judge_result.get("quality", "unknown"),
@@ -872,11 +949,18 @@ def run_llm_judge(
                 "expectation_suggestion": judge_result.get("expectation_suggestion", ""),
             }
 
+            # P3: Extract confidence if present in judge response
+            confidence = judge_result.get("confidence")
+            if confidence is not None:
+                parsed_result["confidence"] = confidence
+
             # Add span attributes
             if span:
                 span.set_attribute("quality", parsed_result["quality"])
                 span.set_attribute("tool_accuracy", parsed_result["tool_accuracy"])
                 span.set_attribute("duration_seconds", duration)
+                if confidence is not None:
+                    span.set_attribute("confidence", confidence)
 
             # Log judge result with full suggestions
             log_to_loki(
@@ -894,6 +978,7 @@ def run_llm_judge(
                     "reasoning": parsed_result["reasoning"],
                     "refinement_suggestion": parsed_result["refinement_suggestion"],
                     "expectation_suggestion": parsed_result["expectation_suggestion"],
+                    "confidence": confidence,
                 },
             )
 
@@ -909,14 +994,14 @@ def run_llm_judge(
                 extra={
                     "event": "judge_parse_error",
                     "error": str(e),
-                    "raw_output": proc.stdout[:500],
+                    "raw_output": raw_output[:1000],  # More context for debugging
                 },
             )
 
             return {
                 "quality": "unknown",
                 "tool_accuracy": "unknown",
-                "reasoning": f"Failed to parse judge response: {str(e)[:100]} - Output: {proc.stdout[:300]}",
+                "reasoning": f"Failed to parse judge response: {str(e)[:100]} - Output: {raw_output[:300]}",
                 "refinement_suggestion": "",
                 "expectation_suggestion": "",
             }
@@ -1253,6 +1338,19 @@ def run_skill_test(
         if resume_session_id:
             fork_session = True
             print(f"Forking from prompt {fork_from} checkpoint: {resume_session_id[:8]}...", file=out)
+
+            # Log checkpoint fork event
+            log_to_loki(
+                f"Forking from checkpoint at prompt {fork_from}",
+                level="info",
+                labels={"fork_from": str(fork_from)},
+                extra={
+                    "event": "checkpoint_fork",
+                    "fork_from_prompt": fork_from,
+                    "session_id": resume_session_id[:16] if resume_session_id else "",
+                    "target_prompt": prompt_index,
+                },
+            )
         else:
             print(f"Warning: No checkpoint found for prompt {fork_from}", file=out)
 
@@ -1315,9 +1413,36 @@ def run_skill_test(
                     if verbose and new_captures:
                         print(f"  Captured: {new_captures}", file=out)
 
+                # P4: Log assertion start event
+                assertion_start_time = time.time()
+                log_to_loki(
+                    f"Running assertions for prompt {spec.index}",
+                    level="debug",
+                    labels={"prompt_index": str(spec.index)},
+                    extra={
+                        "event": "assertion_start",
+                        "prompt_index": spec.index,
+                    },
+                )
+
                 # Run assertions
                 tool_assertions = run_tool_assertions(tools_called, spec.expect.tools)
                 text_assertions = run_text_assertions(response_text, spec.expect.text)
+
+                # P4: Log assertion end event with timing
+                assertion_duration = time.time() - assertion_start_time
+                log_to_loki(
+                    f"Assertions completed for prompt {spec.index}",
+                    level="debug",
+                    labels={"prompt_index": str(spec.index)},
+                    extra={
+                        "event": "assertion_end",
+                        "prompt_index": spec.index,
+                        "duration_seconds": assertion_duration,
+                        "tool_assertions_count": len(tool_assertions),
+                        "text_assertions_count": len(text_assertions),
+                    },
+                )
 
                 # Log assertion results
                 failed_tool_assertions = [a for a in tool_assertions if not a[1]]
@@ -1446,6 +1571,9 @@ def run_skill_test(
             },
         )
 
+    # Clean up old lock files from previous test runs
+    _cleanup_old_lock_files()
+
     return results
 
 
@@ -1543,6 +1671,8 @@ Telemetry (enabled by default):
         scenario=scenario_name,
         debug=not args.no_debug,
     )
+    # Register shutdown to ensure telemetry flushes on any exit path
+    atexit.register(shutdown_telemetry)
 
     results = run_skill_test(
         prompts_file=args.prompts_file,
