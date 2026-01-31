@@ -36,6 +36,7 @@ Generate release notes for version 2.5.0:
 ## Expected Behavior
 
 Claude will:
+
 1. Query JIRA for resolved issues using JQL
 2. Format the results into release note content
 3. Create or update a Confluence page with the information

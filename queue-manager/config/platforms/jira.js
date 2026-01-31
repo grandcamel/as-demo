@@ -11,10 +11,10 @@ module.exports = {
 
   // JIRA scenarios
   SCENARIO_NAMES: {
-    'issue': { file: 'jira/issue.md', title: 'Issue Management', icon: '📝' },
+    issue: { file: 'jira/issue.md', title: 'Issue Management', icon: '📝' },
     'jira-search': { file: 'jira/search.md', title: 'JQL Search', icon: '🔍' },
-    'agile': { file: 'jira/agile.md', title: 'Agile & Sprints', icon: '🏃' },
-    'jsm': { file: 'jira/jsm.md', title: 'Service Desk', icon: '🎫' }
+    agile: { file: 'jira/agile.md', title: 'Agile & Sprints', icon: '🏃' },
+    jsm: { file: 'jira/jsm.md', title: 'Service Desk', icon: '🎫' },
   },
 
   /**
@@ -26,7 +26,7 @@ module.exports = {
       JIRA_API_TOKEN: this.API_TOKEN,
       JIRA_EMAIL: this.EMAIL,
       JIRA_SITE_URL: this.SITE_URL,
-      JIRA_PROFILE: 'demo'
+      JIRA_PROFILE: 'demo',
     };
   },
 
@@ -36,5 +36,5 @@ module.exports = {
    */
   isConfigured() {
     return !!(this.API_TOKEN && this.EMAIL && this.SITE_URL);
-  }
+  },
 };

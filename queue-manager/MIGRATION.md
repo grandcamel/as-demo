@@ -5,6 +5,7 @@
 The project has been migrated from Jest to Vitest. Most tests are passing, but some tests require additional updates to work with Vitest's mocking API.
 
 ### Passing Tests (177/295)
+
 - `lib/rate-limit.test.js` - All passing
 - `lib/session.test.js` - All passing
 - `config/metrics.test.js` - All passing
@@ -72,13 +73,13 @@ const config = await import('./config');
 
 ## Key Differences
 
-| Feature | Jest | Vitest |
-|---------|------|--------|
-| Mock syntax | `jest.mock()` | `vi.mock()` |
-| Inline mock | `jest.doMock()` | `vi.doMock()` |
-| Reset modules | `jest.resetModules()` | `vi.resetModules()` |
-| Spy | `jest.spyOn()` | `vi.spyOn()` |
-| Module caching | Clears require.cache | ESM-aware caching |
+| Feature        | Jest                  | Vitest              |
+| -------------- | --------------------- | ------------------- |
+| Mock syntax    | `jest.mock()`         | `vi.mock()`         |
+| Inline mock    | `jest.doMock()`       | `vi.doMock()`       |
+| Reset modules  | `jest.resetModules()` | `vi.resetModules()` |
+| Spy            | `jest.spyOn()`        | `vi.spyOn()`        |
+| Module caching | Clears require.cache  | ESM-aware caching   |
 
 ## Running Tests
 
@@ -96,6 +97,7 @@ npm run test:watch
 ## Timeline
 
 The migration can be completed incrementally. Priority order:
+
 1. `config/platforms/*.test.js` - Simple env var tests
 2. `lib/env-file.test.js` - fs mocking
 3. `services/state.test.js` - State management

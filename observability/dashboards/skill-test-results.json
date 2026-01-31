@@ -276,7 +276,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
       "id": 8,
       "options": {
-        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
@@ -326,7 +331,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
       "id": 9,
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
@@ -353,7 +363,11 @@
           },
           "mappings": [
             {
-              "options": { "high": { "color": "green", "index": 0 }, "medium": { "color": "yellow", "index": 1 }, "low": { "color": "red", "index": 2 } },
+              "options": {
+                "high": { "color": "green", "index": 0 },
+                "medium": { "color": "yellow", "index": 1 },
+                "low": { "color": "red", "index": 2 }
+              },
               "type": "value"
             }
           ],
@@ -373,7 +387,10 @@
           },
           {
             "matcher": { "id": "byName", "options": "prompt_index" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "Prompt #" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "Prompt #" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "quality" },
@@ -384,19 +401,32 @@
           },
           {
             "matcher": { "id": "byName", "options": "tool_accuracy" },
-            "properties": [{ "id": "custom.width", "value": 100 }, { "id": "displayName", "value": "Tool Acc." }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "displayName", "value": "Tool Acc." }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "duration_seconds" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "unit", "value": "s" }, { "id": "displayName", "value": "Duration" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "unit", "value": "s" },
+              { "id": "displayName", "value": "Duration" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "tools_called" },
-            "properties": [{ "id": "custom.width", "value": 200 }, { "id": "displayName", "value": "Tools" }]
+            "properties": [
+              { "id": "custom.width", "value": 200 },
+              { "id": "displayName", "value": "Tools" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "reasoning" },
-            "properties": [{ "id": "custom.width", "value": 400 }, { "id": "displayName", "value": "Judge Analysis" }]
+            "properties": [
+              { "id": "custom.width", "value": 400 },
+              { "id": "displayName", "value": "Judge Analysis" }
+            ]
           }
         ]
       },
@@ -483,31 +513,54 @@
           },
           {
             "matcher": { "id": "byName", "options": "prompt_index" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "Prompt #" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "Prompt #" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "tools_count" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "# Tools" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "# Tools" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "response_length" },
-            "properties": [{ "id": "custom.width", "value": 100 }, { "id": "displayName", "value": "Resp. Len" }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "displayName", "value": "Resp. Len" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "duration_seconds" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "unit", "value": "s" }, { "id": "displayName", "value": "Duration" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "unit", "value": "s" },
+              { "id": "displayName", "value": "Duration" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "cost_usd" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "unit", "value": "currencyUSD" }, { "id": "displayName", "value": "Cost" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "unit", "value": "currencyUSD" },
+              { "id": "displayName", "value": "Cost" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "tools_called" },
-            "properties": [{ "id": "custom.width", "value": 250 }, { "id": "displayName", "value": "Tools Called" }]
+            "properties": [
+              { "id": "custom.width", "value": 250 },
+              { "id": "displayName", "value": "Tools Called" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "response_preview" },
-            "properties": [{ "id": "custom.width", "value": 500 }, { "id": "displayName", "value": "Response Preview" }]
+            "properties": [
+              { "id": "custom.width", "value": 500 },
+              { "id": "displayName", "value": "Response Preview" }
+            ]
           }
         ]
       },
@@ -596,7 +649,10 @@
           },
           {
             "matcher": { "id": "byName", "options": "prompt_index" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "Prompt #" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "Prompt #" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "tool" },
@@ -604,11 +660,17 @@
           },
           {
             "matcher": { "id": "byName", "options": "tool_name" },
-            "properties": [{ "id": "custom.width", "value": 150 }, { "id": "displayName", "value": "Tool" }]
+            "properties": [
+              { "id": "custom.width", "value": 150 },
+              { "id": "displayName", "value": "Tool" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "tool_input" },
-            "properties": [{ "id": "custom.width", "value": 500 }, { "id": "displayName", "value": "Input" }]
+            "properties": [
+              { "id": "custom.width", "value": 500 },
+              { "id": "displayName", "value": "Input" }
+            ]
           }
         ]
       },
@@ -691,35 +753,62 @@
           },
           {
             "matcher": { "id": "byName", "options": "passed_count" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "Passed" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "Passed" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "failed_count" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "Failed" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "Failed" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "pass_rate" },
-            "properties": [{ "id": "custom.width", "value": 100 }, { "id": "unit", "value": "percentunit" }, { "id": "displayName", "value": "Pass Rate" }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "unit", "value": "percentunit" },
+              { "id": "displayName", "value": "Pass Rate" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "quality_high" },
-            "properties": [{ "id": "custom.width", "value": 60 }, { "id": "displayName", "value": "High" }]
+            "properties": [
+              { "id": "custom.width", "value": 60 },
+              { "id": "displayName", "value": "High" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "quality_medium" },
-            "properties": [{ "id": "custom.width", "value": 60 }, { "id": "displayName", "value": "Med" }]
+            "properties": [
+              { "id": "custom.width", "value": 60 },
+              { "id": "displayName", "value": "Med" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "quality_low" },
-            "properties": [{ "id": "custom.width", "value": 60 }, { "id": "displayName", "value": "Low" }]
+            "properties": [
+              { "id": "custom.width", "value": 60 },
+              { "id": "displayName", "value": "Low" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "total_duration_seconds" },
-            "properties": [{ "id": "custom.width", "value": 100 }, { "id": "unit", "value": "s" }, { "id": "displayName", "value": "Total Dur." }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "unit", "value": "s" },
+              { "id": "displayName", "value": "Total Dur." }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "claude_duration_seconds" },
-            "properties": [{ "id": "custom.width", "value": 100 }, { "id": "unit", "value": "s" }, { "id": "displayName", "value": "Claude Dur." }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "unit", "value": "s" },
+              { "id": "displayName", "value": "Claude Dur." }
+            ]
           }
         ]
       },
@@ -810,15 +899,24 @@
           },
           {
             "matcher": { "id": "byName", "options": "prompt_index" },
-            "properties": [{ "id": "custom.width", "value": 80 }, { "id": "displayName", "value": "Prompt #" }]
+            "properties": [
+              { "id": "custom.width", "value": 80 },
+              { "id": "displayName", "value": "Prompt #" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "failed_tool_assertions" },
-            "properties": [{ "id": "custom.width", "value": 400 }, { "id": "displayName", "value": "Failed Tool Assertions" }]
+            "properties": [
+              { "id": "custom.width", "value": 400 },
+              { "id": "displayName", "value": "Failed Tool Assertions" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "failed_text_assertions" },
-            "properties": [{ "id": "custom.width", "value": 400 }, { "id": "displayName", "value": "Failed Text Assertions" }]
+            "properties": [
+              { "id": "custom.width", "value": 400 },
+              { "id": "displayName", "value": "Failed Text Assertions" }
+            ]
           }
         ]
       },
@@ -896,16 +994,31 @@
             "matcher": { "id": "byName", "options": "traceID" },
             "properties": [
               { "id": "custom.width", "value": 200 },
-              { "id": "links", "value": [{ "title": "View Trace", "url": "/explore?left=%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22queryType%22%3A%22traceqlSearch%22%2C%22limit%22%3A20%2C%22tableType%22%3A%22traces%22%2C%22query%22%3A%22${__value.raw}%22%7D%5D%7D" }] }
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View Trace",
+                    "url": "/explore?left=%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22queryType%22%3A%22traceqlSearch%22%2C%22limit%22%3A20%2C%22tableType%22%3A%22traces%22%2C%22query%22%3A%22${__value.raw}%22%7D%5D%7D"
+                  }
+                ]
+              }
             ]
           },
           {
             "matcher": { "id": "byName", "options": "spanName" },
-            "properties": [{ "id": "custom.width", "value": 200 }, { "id": "displayName", "value": "Operation" }]
+            "properties": [
+              { "id": "custom.width", "value": 200 },
+              { "id": "displayName", "value": "Operation" }
+            ]
           },
           {
             "matcher": { "id": "byName", "options": "traceDuration" },
-            "properties": [{ "id": "custom.width", "value": 100 }, { "id": "unit", "value": "ns" }, { "id": "displayName", "value": "Duration" }]
+            "properties": [
+              { "id": "custom.width", "value": 100 },
+              { "id": "unit", "value": "ns" },
+              { "id": "displayName", "value": "Duration" }
+            ]
           }
         ]
       },

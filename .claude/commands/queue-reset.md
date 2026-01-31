@@ -9,6 +9,7 @@ ssh root@143.110.131.254 "cd /opt/as-demo && docker compose restart queue-manage
 ```
 
 This will:
+
 - Disconnect any active sessions
 - Clear the in-memory queue
 - Redis data (invites) will persist

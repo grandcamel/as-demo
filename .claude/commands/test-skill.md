@@ -1,5 +1,5 @@
 ---
-description: "Run skill test: PLATFORM=confluence|jira|splunk SCENARIO=name [MODEL=sonnet] [JUDGE_MODEL=haiku]"
+description: 'Run skill test: PLATFORM=confluence|jira|splunk SCENARIO=name [MODEL=sonnet] [JUDGE_MODEL=haiku]'
 arguments:
   - name: PLATFORM
     description: Platform to test (confluence, jira, splunk, cross-platform)

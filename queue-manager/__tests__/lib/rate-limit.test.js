@@ -7,7 +7,7 @@
 const {
   createRateLimiter,
   createConnectionRateLimiter,
-  createInviteRateLimiter
+  createInviteRateLimiter,
 } = require('../../lib/rate-limit');
 
 describe('rate-limit', () => {
@@ -24,39 +24,45 @@ describe('rate-limit', () => {
   describe('createRateLimiter', () => {
     describe('validation', () => {
       it('should throw error for missing windowMs', () => {
-        expect(() => createRateLimiter({ maxAttempts: 10 }))
-          .toThrow('windowMs must be a positive number');
+        expect(() => createRateLimiter({ maxAttempts: 10 })).toThrow(
+          'windowMs must be a positive number'
+        );
       });
 
       it('should throw error for zero windowMs', () => {
-        expect(() => createRateLimiter({ windowMs: 0, maxAttempts: 10 }))
-          .toThrow('windowMs must be a positive number');
+        expect(() => createRateLimiter({ windowMs: 0, maxAttempts: 10 })).toThrow(
+          'windowMs must be a positive number'
+        );
       });
 
       it('should throw error for negative windowMs', () => {
-        expect(() => createRateLimiter({ windowMs: -1000, maxAttempts: 10 }))
-          .toThrow('windowMs must be a positive number');
+        expect(() => createRateLimiter({ windowMs: -1000, maxAttempts: 10 })).toThrow(
+          'windowMs must be a positive number'
+        );
       });
 
       it('should throw error for missing maxAttempts', () => {
-        expect(() => createRateLimiter({ windowMs: 60000 }))
-          .toThrow('maxAttempts must be a positive number');
+        expect(() => createRateLimiter({ windowMs: 60000 })).toThrow(
+          'maxAttempts must be a positive number'
+        );
       });
 
       it('should throw error for zero maxAttempts', () => {
-        expect(() => createRateLimiter({ windowMs: 60000, maxAttempts: 0 }))
-          .toThrow('maxAttempts must be a positive number');
+        expect(() => createRateLimiter({ windowMs: 60000, maxAttempts: 0 })).toThrow(
+          'maxAttempts must be a positive number'
+        );
       });
 
       it('should throw error for negative maxAttempts', () => {
-        expect(() => createRateLimiter({ windowMs: 60000, maxAttempts: -5 }))
-          .toThrow('maxAttempts must be a positive number');
+        expect(() => createRateLimiter({ windowMs: 60000, maxAttempts: -5 })).toThrow(
+          'maxAttempts must be a positive number'
+        );
       });
 
       it('should create limiter with valid options', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 10
+          maxAttempts: 10,
         });
 
         expect(limiter).toHaveProperty('check');
@@ -70,7 +76,7 @@ describe('rate-limit', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
           maxAttempts: 10,
-          cleanupThreshold: 500
+          cleanupThreshold: 500,
         });
 
         expect(limiter).toBeDefined();
@@ -81,7 +87,7 @@ describe('rate-limit', () => {
       it('should allow first attempt', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         const result = limiter.check('192.168.1.1');
@@ -93,7 +99,7 @@ describe('rate-limit', () => {
       it('should decrement remaining on each attempt', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         expect(limiter.check('ip1').remaining).toBe(2);
@@ -107,7 +113,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1'); // 1
@@ -127,7 +133,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 2
+          maxAttempts: 2,
         });
 
         limiter.check('ip1');
@@ -145,7 +151,7 @@ describe('rate-limit', () => {
       it('should not increment when increment=false', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1', false); // peek, don't increment
@@ -160,7 +166,7 @@ describe('rate-limit', () => {
       it('should track different keys independently', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 2
+          maxAttempts: 2,
         });
 
         limiter.check('ip1');
@@ -180,7 +186,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 2
+          maxAttempts: 2,
         });
 
         limiter.check('ip1');
@@ -203,7 +209,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1');
@@ -222,7 +228,7 @@ describe('rate-limit', () => {
       it('should record failure for new key', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.recordFailure('ip1');
@@ -234,7 +240,7 @@ describe('rate-limit', () => {
       it('should increment existing record', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.recordFailure('ip1');
@@ -251,7 +257,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.recordFailure('ip1');
@@ -274,7 +280,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1');
@@ -297,7 +303,7 @@ describe('rate-limit', () => {
 
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1');
@@ -322,7 +328,7 @@ describe('rate-limit', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
           maxAttempts: 3,
-          cleanupThreshold: 5
+          cleanupThreshold: 5,
         });
 
         // Add entries
@@ -347,7 +353,7 @@ describe('rate-limit', () => {
       it('should reset specific key', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 2
+          maxAttempts: 2,
         });
 
         limiter.check('ip1');
@@ -365,7 +371,7 @@ describe('rate-limit', () => {
       it('should not affect other keys', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1');
@@ -379,7 +385,7 @@ describe('rate-limit', () => {
       it('should handle resetting non-existent key', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         expect(() => limiter.reset('non-existent')).not.toThrow();
@@ -390,7 +396,7 @@ describe('rate-limit', () => {
       it('should return 0 for empty limiter', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         expect(limiter.size()).toBe(0);
@@ -399,7 +405,7 @@ describe('rate-limit', () => {
       it('should return correct count', () => {
         const limiter = createRateLimiter({
           windowMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 3,
         });
 
         limiter.check('ip1');

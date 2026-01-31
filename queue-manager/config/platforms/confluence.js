@@ -11,17 +11,17 @@ module.exports = {
 
   // Confluence scenarios
   SCENARIO_NAMES: {
-    'page': { file: 'confluence/page.md', title: 'Page Management', icon: '📝' },
-    'search': { file: 'confluence/search.md', title: 'CQL Search', icon: '🔍' },
-    'space': { file: 'confluence/space.md', title: 'Space Management', icon: '🏠' },
-    'hierarchy': { file: 'confluence/hierarchy.md', title: 'Page Hierarchy', icon: '🌳' },
-    'template': { file: 'confluence/template.md', title: 'Templates', icon: '📋' },
-    'comment': { file: 'confluence/comment.md', title: 'Comments', icon: '💬' },
-    'attachment': { file: 'confluence/attachment.md', title: 'Attachments', icon: '📎' },
-    'label': { file: 'confluence/label.md', title: 'Labels', icon: '🏷️' },
-    'permission': { file: 'confluence/permission.md', title: 'Permissions', icon: '🔒' },
-    'bulk': { file: 'confluence/bulk.md', title: 'Bulk Operations', icon: '📦' },
-    'analytics': { file: 'confluence/analytics.md', title: 'Analytics', icon: '📊' }
+    page: { file: 'confluence/page.md', title: 'Page Management', icon: '📝' },
+    search: { file: 'confluence/search.md', title: 'CQL Search', icon: '🔍' },
+    space: { file: 'confluence/space.md', title: 'Space Management', icon: '🏠' },
+    hierarchy: { file: 'confluence/hierarchy.md', title: 'Page Hierarchy', icon: '🌳' },
+    template: { file: 'confluence/template.md', title: 'Templates', icon: '📋' },
+    comment: { file: 'confluence/comment.md', title: 'Comments', icon: '💬' },
+    attachment: { file: 'confluence/attachment.md', title: 'Attachments', icon: '📎' },
+    label: { file: 'confluence/label.md', title: 'Labels', icon: '🏷️' },
+    permission: { file: 'confluence/permission.md', title: 'Permissions', icon: '🔒' },
+    bulk: { file: 'confluence/bulk.md', title: 'Bulk Operations', icon: '📦' },
+    analytics: { file: 'confluence/analytics.md', title: 'Analytics', icon: '📊' },
   },
 
   /**
@@ -33,7 +33,7 @@ module.exports = {
       CONFLUENCE_API_TOKEN: this.API_TOKEN,
       CONFLUENCE_EMAIL: this.EMAIL,
       CONFLUENCE_SITE_URL: this.SITE_URL,
-      CONFLUENCE_PROFILE: 'demo'
+      CONFLUENCE_PROFILE: 'demo',
     };
   },
 
@@ -43,5 +43,5 @@ module.exports = {
    */
   isConfigured() {
     return !!(this.API_TOKEN && this.EMAIL && this.SITE_URL);
-  }
+  },
 };

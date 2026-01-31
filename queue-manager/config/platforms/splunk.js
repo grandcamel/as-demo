@@ -12,14 +12,14 @@ module.exports = {
 
   // Splunk scenarios
   SCENARIO_NAMES: {
-    'devops': { file: 'splunk/devops.md', title: 'DevOps Engineer', icon: '🔧' },
-    'sre': { file: 'splunk/sre.md', title: 'SRE / On-Call', icon: '🚨' },
-    'support': { file: 'splunk/support.md', title: 'Support Engineer', icon: '🎧' },
-    'management': { file: 'splunk/management.md', title: 'Management', icon: '📊' },
+    devops: { file: 'splunk/devops.md', title: 'DevOps Engineer', icon: '🔧' },
+    sre: { file: 'splunk/sre.md', title: 'SRE / On-Call', icon: '🚨' },
+    support: { file: 'splunk/support.md', title: 'Support Engineer', icon: '🎧' },
+    management: { file: 'splunk/management.md', title: 'Management', icon: '📊' },
     'splunk-search': { file: 'splunk/search.md', title: 'Search Basics', icon: '🔍' },
-    'alert': { file: 'splunk/alert.md', title: 'Alert Management', icon: '🔔' },
-    'job': { file: 'splunk/job.md', title: 'Job Management', icon: '⚙️' },
-    'export': { file: 'splunk/export.md', title: 'Data Export', icon: '📥' }
+    alert: { file: 'splunk/alert.md', title: 'Alert Management', icon: '🔔' },
+    job: { file: 'splunk/job.md', title: 'Job Management', icon: '⚙️' },
+    export: { file: 'splunk/export.md', title: 'Data Export', icon: '📥' },
   },
 
   /**
@@ -33,7 +33,7 @@ module.exports = {
       SPLUNK_USERNAME: this.USERNAME,
       SPLUNK_PASSWORD: this.PASSWORD,
       SPLUNK_HEC_TOKEN: this.HEC_TOKEN,
-      SPLUNK_PROFILE: 'demo'
+      SPLUNK_PROFILE: 'demo',
     };
   },
 
@@ -43,5 +43,5 @@ module.exports = {
    */
   isConfigured() {
     return !!(this.URL && this.USERNAME && this.PASSWORD);
-  }
+  },
 };

@@ -17,7 +17,7 @@ function initMetrics(getQueueLength, getActiveSessionCount) {
   metricsManager = createMetrics({
     serviceName: 'as-demo-queue-manager',
     getQueueLength,
-    getActiveSessionCount
+    getActiveSessionCount,
   });
 }
 
@@ -32,11 +32,25 @@ function getTracer() {
 module.exports = {
   initMetrics,
   getTracer,
-  get sessionsStartedCounter() { return metricsManager?.sessionsStarted; },
-  get sessionsEndedCounter() { return metricsManager?.sessionsEnded; },
-  get sessionDurationHistogram() { return metricsManager?.sessionDuration; },
-  get queueWaitHistogram() { return metricsManager?.queueWait; },
-  get ttydSpawnHistogram() { return metricsManager?.ttydSpawn; },
-  get invitesValidatedCounter() { return metricsManager?.invitesValidated; },
-  get sandboxCleanupHistogram() { return metricsManager?.sandboxCleanup; }
+  get sessionsStartedCounter() {
+    return metricsManager?.sessionsStarted;
+  },
+  get sessionsEndedCounter() {
+    return metricsManager?.sessionsEnded;
+  },
+  get sessionDurationHistogram() {
+    return metricsManager?.sessionDuration;
+  },
+  get queueWaitHistogram() {
+    return metricsManager?.queueWait;
+  },
+  get ttydSpawnHistogram() {
+    return metricsManager?.ttydSpawn;
+  },
+  get invitesValidatedCounter() {
+    return metricsManager?.invitesValidated;
+  },
+  get sandboxCleanupHistogram() {
+    return metricsManager?.sandboxCleanup;
+  },
 };

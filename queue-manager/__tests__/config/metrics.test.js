@@ -16,11 +16,11 @@ const mockCreateMetrics = vi.fn(() => ({
   queueWait: 'mock-queueWait',
   ttydSpawn: 'mock-ttydSpawn',
   invitesValidated: 'mock-invitesValidated',
-  sandboxCleanup: 'mock-sandboxCleanup'
+  sandboxCleanup: 'mock-sandboxCleanup',
 }));
 
 const mockCore = {
-  createMetrics: mockCreateMetrics
+  createMetrics: mockCreateMetrics,
 };
 
 // Helper to get a fresh metrics module with the mock injected
@@ -35,7 +35,7 @@ function getFreshMetricsModule() {
     id: corePath,
     filename: corePath,
     loaded: true,
-    exports: mockCore
+    exports: mockCore,
   };
 
   return require('../../config/metrics');
@@ -57,7 +57,7 @@ describe('metrics config', () => {
       queueWait: 'mock-queueWait',
       ttydSpawn: 'mock-ttydSpawn',
       invitesValidated: 'mock-invitesValidated',
-      sandboxCleanup: 'mock-sandboxCleanup'
+      sandboxCleanup: 'mock-sandboxCleanup',
     }));
 
     metrics = getFreshMetricsModule();
@@ -74,7 +74,7 @@ describe('metrics config', () => {
       expect(createMetrics).toHaveBeenCalledWith({
         serviceName: 'as-demo-queue-manager',
         getQueueLength,
-        getActiveSessionCount
+        getActiveSessionCount,
       });
     });
   });

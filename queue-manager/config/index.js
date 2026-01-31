@@ -49,7 +49,7 @@ function buildScenarioNames() {
     for (const [key, scenario] of Object.entries(config.SCENARIO_NAMES)) {
       scenarios[key] = {
         ...scenario,
-        platform: platform
+        platform: platform,
       };
     }
   }
@@ -59,7 +59,7 @@ function buildScenarioNames() {
   for (const [key, scenario] of Object.entries(availableCrossScenarios)) {
     scenarios[key] = {
       ...scenario,
-      platform: 'cross-platform'
+      platform: 'cross-platform',
     };
   }
 
@@ -156,9 +156,9 @@ module.exports = {
   getScenariosByPlatform() {
     const grouped = {
       'cross-platform': {},
-      'confluence': {},
-      'jira': {},
-      'splunk': {}
+      confluence: {},
+      jira: {},
+      splunk: {},
     };
 
     for (const [key, scenario] of Object.entries(this.SCENARIO_NAMES)) {
@@ -176,5 +176,5 @@ module.exports = {
     }
 
     return grouped;
-  }
+  },
 };

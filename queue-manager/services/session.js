@@ -10,7 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const {
   generateSessionToken: coreGenerateToken,
-  createSessionEnvFile: coreCreateEnvFile
+  createSessionEnvFile: coreCreateEnvFile,
 } = require('@demo-platform/queue-manager-core');
 
 const config = require('../config');
@@ -21,7 +21,7 @@ const {
   sessionDurationHistogram,
   queueWaitHistogram,
   ttydSpawnHistogram,
-  sandboxCleanupHistogram
+  sandboxCleanupHistogram,
 } = require('../config/metrics');
 const state = require('./state');
 const { recordInviteUsage } = require('./invite');
@@ -74,7 +74,7 @@ function createSessionEnvFile(sessionId) {
     sessionId: sessionId,
     containerPath: config.SESSION_ENV_CONTAINER_PATH,
     hostPath: config.SESSION_ENV_HOST_PATH,
-    credentials: envVars
+    credentials: envVars,
   });
 }
 
@@ -96,7 +96,7 @@ function runSandboxCleanup() {
     const platformEnv = {
       ...process.env,
       ...platformConfig.getEnvVars(),
-      OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || ''
+      OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '',
     };
 
     const scriptPath = `/opt/scripts/cleanup_${platform}_sandbox.py`;
@@ -106,7 +106,7 @@ function runSandboxCleanup() {
       const durationSeconds = (Date.now() - startTime) / 1000;
       sandboxCleanupHistogram?.record(durationSeconds, {
         success: code === 0 ? 'true' : 'false',
-        platform: platform
+        platform: platform,
       });
       span?.setAttribute('sandbox.cleanup_duration_seconds', durationSeconds);
       span?.setAttribute('sandbox.cleanup_success', code === 0);
@@ -146,8 +146,8 @@ async function startSession(redis, ws, client, processQueue) {
     attributes: {
       'session.client_id': client.id,
       'session.invite_token': client.inviteToken ? client.inviteToken.slice(0, 8) : 'none',
-      'session.enabled_platforms': config.ENABLED_PLATFORMS.join(',')
-    }
+      'session.enabled_platforms': config.ENABLED_PLATFORMS.join(','),
+    },
   });
 
   console.log(`Starting session for client ${client.id}`);
@@ -171,43 +171,74 @@ async function startSession(redis, ws, client, processQueue) {
 
     // Start ttyd with demo container
     // Sensitive env vars are passed via --env-file (not visible in ps aux)
-    const ttydProcess = spawn('ttyd', [
-      '--port', String(config.TTYD_PORT),
-      '--interface', '0.0.0.0',
-      '--max-clients', '1',
-      '--once',
-      '--writable',
-      '--client-option', 'reconnect=0',
-      'docker', 'run', '--rm', '-i',
-      // Security constraints for spawned containers
-      '--memory', '2g',
-      '--memory-swap', '2g',
-      '--cpus', '2',
-      '--pids-limit', '256',
-      '--security-opt', 'no-new-privileges:true',
-      // Note: Docker applies default seccomp profile automatically
-      // Explicit 'seccomp=default' fails on some Docker installations
-      '--cap-drop', 'ALL',
-      '--cap-add', 'CHOWN',
-      '--cap-add', 'SETUID',
-      '--cap-add', 'SETGID',
-      '--cap-add', 'DAC_OVERRIDE',
-      '--read-only',
-      '--tmpfs', '/tmp:rw,noexec,nosuid,size=512m',
-      '--tmpfs', '/home/devuser:rw,noexec,nosuid,size=256m,uid=1000,gid=1000',
-      // Environment configuration
-      '--env-file', envFile.containerPath,
-      '-e', 'TERM=xterm',
-      '-e', `SESSION_TIMEOUT_MINUTES=${config.SESSION_TIMEOUT_MINUTES}`,
-      '-e', `ENABLED_PLATFORMS=${config.ENABLED_PLATFORMS.join(',')}`,
-      '-e', `ENABLE_AUTOPLAY=${process.env.ENABLE_AUTOPLAY || 'false'}`,
-      '-e', `AUTOPLAY_DEBUG=${process.env.AUTOPLAY_DEBUG || 'false'}`,
-      '-e', `AUTOPLAY_SHOW_TOOLS=${process.env.AUTOPLAY_SHOW_TOOLS || 'false'}`,
-      '-e', `OTEL_ENDPOINT=${process.env.OTEL_ENDPOINT || ''}`,
-      config.DEMO_CONTAINER_IMAGE
-    ], {
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const ttydProcess = spawn(
+      'ttyd',
+      [
+        '--port',
+        String(config.TTYD_PORT),
+        '--interface',
+        '0.0.0.0',
+        '--max-clients',
+        '1',
+        '--once',
+        '--writable',
+        '--client-option',
+        'reconnect=0',
+        'docker',
+        'run',
+        '--rm',
+        '-i',
+        // Security constraints for spawned containers
+        '--memory',
+        '2g',
+        '--memory-swap',
+        '2g',
+        '--cpus',
+        '2',
+        '--pids-limit',
+        '256',
+        '--security-opt',
+        'no-new-privileges:true',
+        // Note: Docker applies default seccomp profile automatically
+        // Explicit 'seccomp=default' fails on some Docker installations
+        '--cap-drop',
+        'ALL',
+        '--cap-add',
+        'CHOWN',
+        '--cap-add',
+        'SETUID',
+        '--cap-add',
+        'SETGID',
+        '--cap-add',
+        'DAC_OVERRIDE',
+        '--read-only',
+        '--tmpfs',
+        '/tmp:rw,noexec,nosuid,size=512m',
+        '--tmpfs',
+        '/home/devuser:rw,noexec,nosuid,size=256m,uid=1000,gid=1000',
+        // Environment configuration
+        '--env-file',
+        envFile.containerPath,
+        '-e',
+        'TERM=xterm',
+        '-e',
+        `SESSION_TIMEOUT_MINUTES=${config.SESSION_TIMEOUT_MINUTES}`,
+        '-e',
+        `ENABLED_PLATFORMS=${config.ENABLED_PLATFORMS.join(',')}`,
+        '-e',
+        `ENABLE_AUTOPLAY=${process.env.ENABLE_AUTOPLAY || 'false'}`,
+        '-e',
+        `AUTOPLAY_DEBUG=${process.env.AUTOPLAY_DEBUG || 'false'}`,
+        '-e',
+        `AUTOPLAY_SHOW_TOOLS=${process.env.AUTOPLAY_SHOW_TOOLS || 'false'}`,
+        '-e',
+        `OTEL_ENDPOINT=${process.env.OTEL_ENDPOINT || ''}`,
+        config.DEMO_CONTAINER_IMAGE,
+      ],
+      {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
 
     // Log ttyd stdout/stderr for debugging
     ttydProcess.stdout.on('data', (data) => {
@@ -224,7 +255,7 @@ async function startSession(redis, ws, client, processQueue) {
 
     const startedAt = new Date();
     const expiresAt = new Date(startedAt.getTime() + config.SESSION_TIMEOUT_MINUTES * 60 * 1000);
-    const queueWaitMs = client.joinedAt ? (startedAt - client.joinedAt) : 0;
+    const queueWaitMs = client.joinedAt ? startedAt - client.joinedAt : 0;
 
     // Record queue wait time
     if (queueWaitMs > 0) {
@@ -251,7 +282,7 @@ async function startSession(redis, ws, client, processQueue) {
       userAgent: client.userAgent,
       queueWaitMs: queueWaitMs,
       errors: [],
-      envFileCleanup: envFileCleanup
+      envFileCleanup: envFileCleanup,
     };
 
     state.setActiveSession(activeSession);
@@ -291,29 +322,36 @@ async function startSession(redis, ws, client, processQueue) {
     activeSession.hardTimeout = hardTimeout;
 
     // Notify client
-    ws.send(JSON.stringify({
-      type: 'session_starting',
-      terminal_url: '/terminal',
-      expires_at: expiresAt.toISOString(),
-      session_token: sessionToken,
-      enabled_platforms: config.ENABLED_PLATFORMS
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'session_starting',
+        terminal_url: '/terminal',
+        expires_at: expiresAt.toISOString(),
+        session_token: sessionToken,
+        enabled_platforms: config.ENABLED_PLATFORMS,
+      })
+    );
 
     // Schedule warning and timeout
     scheduleSessionWarning(ws, client);
     scheduleSessionTimeout(redis, client, processQueue);
 
     // Save to Redis for persistence
-    await redis.set(`session:${client.id}`, JSON.stringify({
-      sessionId: sessionId,
-      startedAt: startedAt.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      inviteToken: client.inviteToken || null,
-      ip: client.ip,
-      userAgent: client.userAgent,
-      queueWaitMs: queueWaitMs,
-      enabledPlatforms: config.ENABLED_PLATFORMS
-    }), 'EX', config.SESSION_TIMEOUT_MINUTES * 60);
+    await redis.set(
+      `session:${client.id}`,
+      JSON.stringify({
+        sessionId: sessionId,
+        startedAt: startedAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        inviteToken: client.inviteToken || null,
+        ip: client.ip,
+        userAgent: client.userAgent,
+        queueWaitMs: queueWaitMs,
+        enabledPlatforms: config.ENABLED_PLATFORMS,
+      }),
+      'EX',
+      config.SESSION_TIMEOUT_MINUTES * 60
+    );
 
     // Record metrics
     sessionsStartedCounter?.add(1);
@@ -326,10 +364,7 @@ async function startSession(redis, ws, client, processQueue) {
     console.error('Failed to start session:', err);
     span?.recordException(err);
     span?.end();
-    ws.send(formatWsError(
-      ErrorCodes.SESSION_START_FAILED,
-      'Failed to start demo session'
-    ));
+    ws.send(formatWsError(ErrorCodes.SESSION_START_FAILED, 'Failed to start demo session'));
     client.state = 'connected';
 
     // Clean up env file if it was created
@@ -348,10 +383,12 @@ function scheduleSessionWarning(ws, client) {
   setTimeout(() => {
     const activeSession = state.getActiveSession();
     if (activeSession && activeSession.clientId === client.id) {
-      ws.send(JSON.stringify({
-        type: 'session_warning',
-        minutes_remaining: 5
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'session_warning',
+          minutes_remaining: 5,
+        })
+      );
     }
   }, warningTime);
 }
@@ -383,7 +420,7 @@ async function endSession(redis, reason, processQueue) {
       'session.id': activeSession.sessionId,
       'session.client_id': activeSession.clientId,
       'session.end_reason': reason,
-    }
+    },
   });
 
   const clientId = activeSession.clientId;
@@ -427,11 +464,13 @@ async function endSession(redis, reason, processQueue) {
   // Notify client to clear cookie
   const clientWs = findClientWs(clientId);
   if (clientWs) {
-    clientWs.send(JSON.stringify({
-      type: 'session_ended',
-      reason: reason,
-      clear_session_cookie: true
-    }));
+    clientWs.send(
+      JSON.stringify({
+        type: 'session_ended',
+        reason: reason,
+        clear_session_cookie: true,
+      })
+    );
 
     const client = state.clients.get(clientWs);
     if (client) {
@@ -459,5 +498,5 @@ module.exports = {
   findClientWs,
   createSessionEnvFile,
   startSession,
-  endSession
+  endSession,
 };

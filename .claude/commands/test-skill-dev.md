@@ -1,5 +1,5 @@
 ---
-description: "Fast skill test with verbose output: PLATFORM=confluence|jira|splunk SCENARIO=name"
+description: 'Fast skill test with verbose output: PLATFORM=confluence|jira|splunk SCENARIO=name'
 arguments:
   - name: PLATFORM
     description: Platform to test (confluence, jira, splunk, cross-platform)

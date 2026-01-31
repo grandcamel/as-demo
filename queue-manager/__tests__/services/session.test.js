@@ -50,10 +50,10 @@ describe('session service', () => {
     mockSpan = {
       setAttribute: vi.fn(),
       recordException: vi.fn(),
-      end: vi.fn()
+      end: vi.fn(),
     };
     mockTracer = {
-      startSpan: vi.fn(() => mockSpan)
+      startSpan: vi.fn(() => mockSpan),
     };
 
     // Create mock ttyd process
@@ -61,7 +61,7 @@ describe('session service', () => {
       stdout: { on: vi.fn() },
       stderr: { on: vi.fn() },
       on: vi.fn(),
-      kill: vi.fn()
+      kill: vi.fn(),
     };
 
     // Mock state
@@ -71,7 +71,9 @@ describe('session service', () => {
       pendingSessionTokens,
       sessionTokens,
       getActiveSession: vi.fn(() => mockActiveSession),
-      setActiveSession: vi.fn((s) => { mockActiveSession = s; })
+      setActiveSession: vi.fn((s) => {
+        mockActiveSession = s;
+      }),
     };
 
     // Mock config
@@ -87,11 +89,11 @@ describe('session service', () => {
       platforms: {
         confluence: {
           isConfigured: () => true,
-          getEnvVars: () => ({ CONFLUENCE_URL: 'https://example.atlassian.net' })
-        }
+          getEnvVars: () => ({ CONFLUENCE_URL: 'https://example.atlassian.net' }),
+        },
       },
       getAllEnvVars: vi.fn(() => ({ CONFLUENCE_URL: 'https://example.atlassian.net' })),
-      getConfiguredPlatforms: vi.fn(() => ['confluence'])
+      getConfiguredPlatforms: vi.fn(() => ['confluence']),
     };
 
     // Mock metrics
@@ -102,12 +104,12 @@ describe('session service', () => {
       sessionDurationHistogram: { record: vi.fn() },
       queueWaitHistogram: { record: vi.fn() },
       ttydSpawnHistogram: { record: vi.fn() },
-      sandboxCleanupHistogram: { record: vi.fn() }
+      sandboxCleanupHistogram: { record: vi.fn() },
     };
 
     // Mock invite service
     mockInviteService = {
-      recordInviteUsage: vi.fn()
+      recordInviteUsage: vi.fn(),
     };
 
     // Mock core library
@@ -116,8 +118,8 @@ describe('session service', () => {
       createSessionEnvFile: vi.fn(() => ({
         containerPath: '/run/session-env/test-session.env',
         hostPath: '/tmp/session-env/test-session.env',
-        cleanup: vi.fn()
-      }))
+        cleanup: vi.fn(),
+      })),
     };
 
     // Mock spawn
@@ -136,12 +138,18 @@ describe('session service', () => {
       '../../errors',
       '@demo-platform/queue-manager-core',
       'child_process',
-      'uuid'
-    ].map(p => {
-      try { return require.resolve(p); } catch { return null; }
-    }).filter(Boolean);
+      'uuid',
+    ]
+      .map((p) => {
+        try {
+          return require.resolve(p);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
-    paths.forEach(p => delete require.cache[p]);
+    paths.forEach((p) => delete require.cache[p]);
 
     // Mock child_process
     const cpPath = require.resolve('child_process');
@@ -149,7 +157,7 @@ describe('session service', () => {
       id: cpPath,
       filename: cpPath,
       loaded: true,
-      exports: { spawn: mockSpawn }
+      exports: { spawn: mockSpawn },
     };
 
     // Mock uuid
@@ -158,7 +166,7 @@ describe('session service', () => {
       id: uuidPath,
       filename: uuidPath,
       loaded: true,
-      exports: mockUuid
+      exports: mockUuid,
     };
 
     // Mock @demo-platform/queue-manager-core
@@ -167,7 +175,7 @@ describe('session service', () => {
       id: corePath,
       filename: corePath,
       loaded: true,
-      exports: mockCoreLib
+      exports: mockCoreLib,
     };
 
     // Mock config
@@ -176,7 +184,7 @@ describe('session service', () => {
       id: configPath,
       filename: configPath,
       loaded: true,
-      exports: mockConfig
+      exports: mockConfig,
     };
 
     // Mock config/metrics
@@ -185,7 +193,7 @@ describe('session service', () => {
       id: metricsPath,
       filename: metricsPath,
       loaded: true,
-      exports: mockMetrics
+      exports: mockMetrics,
     };
 
     // Mock state
@@ -194,7 +202,7 @@ describe('session service', () => {
       id: statePath,
       filename: statePath,
       loaded: true,
-      exports: mockState
+      exports: mockState,
     };
 
     // Mock invite service
@@ -203,7 +211,7 @@ describe('session service', () => {
       id: invitePath,
       filename: invitePath,
       loaded: true,
-      exports: mockInviteService
+      exports: mockInviteService,
     };
 
     // Mock errors module
@@ -214,10 +222,10 @@ describe('session service', () => {
       loaded: true,
       exports: {
         ErrorCodes: {
-          SESSION_START_FAILED: 'ERR_SESSION_START_FAILED'
+          SESSION_START_FAILED: 'ERR_SESSION_START_FAILED',
         },
-        formatWsError: vi.fn((code, message) => JSON.stringify({ type: 'error', code, message }))
-      }
+        formatWsError: vi.fn((code, message) => JSON.stringify({ type: 'error', code, message })),
+      },
     };
 
     // Now require the module
@@ -225,14 +233,14 @@ describe('session service', () => {
 
     // Setup mock WebSocket
     mockWs = {
-      send: vi.fn()
+      send: vi.fn(),
     };
 
     // Setup mock Redis
     mockRedis = {
       get: vi.fn(),
       set: vi.fn(),
-      del: vi.fn()
+      del: vi.fn(),
     };
   });
 
@@ -244,7 +252,10 @@ describe('session service', () => {
     it('should call core library with sessionId and secret', () => {
       const token = session.generateSessionToken('session-123');
 
-      expect(mockCoreLib.generateSessionToken).toHaveBeenCalledWith('session-123', 'test-secret-key');
+      expect(mockCoreLib.generateSessionToken).toHaveBeenCalledWith(
+        'session-123',
+        'test-secret-key'
+      );
       expect(token).toBe('generated-token-123');
     });
   });
@@ -307,7 +318,7 @@ describe('session service', () => {
         sessionId: 'session-123',
         containerPath: '/run/session-env',
         hostPath: '/tmp/session-env',
-        credentials: { CONFLUENCE_URL: 'https://example.atlassian.net' }
+        credentials: { CONFLUENCE_URL: 'https://example.atlassian.net' },
       });
       expect(result.containerPath).toBe('/run/session-env/test-session.env');
       expect(result.cleanup).toBeInstanceOf(Function);
@@ -326,14 +337,14 @@ describe('session service', () => {
         inviteToken: 'invite-abc',
         ip: '192.168.1.1',
         userAgent: 'Test Browser',
-        joinedAt: new Date(Date.now() - 5000)
+        joinedAt: new Date(Date.now() - 5000),
       };
       clients.set(mockWs, client);
       queueArray.push('client-1');
       pendingSessionTokens.set('pending-token-123', {
         clientId: 'client-1',
         inviteToken: 'invite-abc',
-        ip: '192.168.1.1'
+        ip: '192.168.1.1',
       });
       processQueueFn = vi.fn();
     });
@@ -355,7 +366,7 @@ describe('session service', () => {
 
       expect(mockCoreLib.createSessionEnvFile).toHaveBeenCalledWith(
         expect.objectContaining({
-          sessionId: 'test-session-uuid'
+          sessionId: 'test-session-uuid',
         })
       );
     });
@@ -363,17 +374,29 @@ describe('session service', () => {
     it('should spawn ttyd with correct arguments', async () => {
       await session.startSession(mockRedis, mockWs, client, processQueueFn);
 
-      expect(mockSpawn).toHaveBeenCalledWith('ttyd', expect.arrayContaining([
-        '--port', '7681',
-        '--interface', '0.0.0.0',
-        '--max-clients', '1',
-        '--once',
-        '--writable',
-        'docker', 'run', '--rm', '-i',
-        '--memory', '2g',
-        '--cap-drop', 'ALL',
-        'demo-container:latest'
-      ]), expect.any(Object));
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'ttyd',
+        expect.arrayContaining([
+          '--port',
+          '7681',
+          '--interface',
+          '0.0.0.0',
+          '--max-clients',
+          '1',
+          '--once',
+          '--writable',
+          'docker',
+          'run',
+          '--rm',
+          '-i',
+          '--memory',
+          '2g',
+          '--cap-drop',
+          'ALL',
+          'demo-container:latest',
+        ]),
+        expect.any(Object)
+      );
     });
 
     it('should register process event handlers', async () => {
@@ -394,21 +417,27 @@ describe('session service', () => {
     it('should set active session with correct data', async () => {
       await session.startSession(mockRedis, mockWs, client, processQueueFn);
 
-      expect(mockState.setActiveSession).toHaveBeenCalledWith(expect.objectContaining({
-        clientId: 'client-1',
-        sessionId: 'test-session-uuid',
-        sessionToken: 'pending-token-123',
-        inviteToken: 'invite-abc',
-        ip: '192.168.1.1',
-        userAgent: 'Test Browser'
-      }));
+      expect(mockState.setActiveSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'client-1',
+          sessionId: 'test-session-uuid',
+          sessionToken: 'pending-token-123',
+          inviteToken: 'invite-abc',
+          ip: '192.168.1.1',
+          userAgent: 'Test Browser',
+        })
+      );
     });
 
     it('should send session_starting message to client', async () => {
       await session.startSession(mockRedis, mockWs, client, processQueueFn);
 
-      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"session_starting"'));
-      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"terminal_url":"/terminal"'));
+      expect(mockWs.send).toHaveBeenCalledWith(
+        expect.stringContaining('"type":"session_starting"')
+      );
+      expect(mockWs.send).toHaveBeenCalledWith(
+        expect.stringContaining('"terminal_url":"/terminal"')
+      );
       expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"enabled_platforms"'));
     });
 
@@ -448,7 +477,7 @@ describe('session service', () => {
       mockCoreLib.createSessionEnvFile.mockReturnValue({
         containerPath: '/run/session-env/test.env',
         hostPath: '/tmp/test.env',
-        cleanup: envCleanupFn
+        cleanup: envCleanupFn,
       });
 
       await session.startSession(mockRedis, mockWs, client, processQueueFn);
@@ -464,9 +493,11 @@ describe('session service', () => {
 
       await session.startSession(mockRedis, mockWs, client, processQueueFn);
 
-      expect(mockState.setActiveSession).toHaveBeenCalledWith(expect.objectContaining({
-        sessionToken: null
-      }));
+      expect(mockState.setActiveSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionToken: null,
+        })
+      );
     });
 
     it('should handle client without joinedAt (no queue wait time)', async () => {
@@ -482,12 +513,12 @@ describe('session service', () => {
         await session.startSession(mockRedis, mockWs, client, processQueueFn);
 
         // Get the exit handler
-        const exitHandler = mockTtydProcess.on.mock.calls.find(c => c[0] === 'exit')[1];
+        const exitHandler = mockTtydProcess.on.mock.calls.find((c) => c[0] === 'exit')[1];
 
         // Simulate ttyd exit
         mockActiveSession = {
           clientId: 'client-1',
-          hardTimeout: setTimeout(() => {}, 10000)
+          hardTimeout: setTimeout(() => {}, 10000),
         };
         mockState.getActiveSession.mockReturnValue(mockActiveSession);
 
@@ -513,7 +544,7 @@ describe('session service', () => {
         ttydProcess: mockTtydProcess,
         startedAt: new Date(Date.now() - 300000),
         hardTimeout: null,
-        envFileCleanup: vi.fn()
+        envFileCleanup: vi.fn(),
       };
       mockState.getActiveSession.mockReturnValue(mockActiveSession);
 
@@ -589,7 +620,7 @@ describe('session service', () => {
         expect.objectContaining({
           clientId: 'client-1',
           sessionId: 'session-123',
-          inviteToken: 'invite-xyz'
+          inviteToken: 'invite-xyz',
         }),
         expect.any(Date),
         'timeout',
@@ -608,9 +639,15 @@ describe('session service', () => {
     it('should send session_ended message to client', async () => {
       await session.endSession(mockRedis, 'timeout', processQueueFn);
 
-      expect(defaultClientWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"session_ended"'));
-      expect(defaultClientWs.send).toHaveBeenCalledWith(expect.stringContaining('"reason":"timeout"'));
-      expect(defaultClientWs.send).toHaveBeenCalledWith(expect.stringContaining('"clear_session_cookie":true'));
+      expect(defaultClientWs.send).toHaveBeenCalledWith(
+        expect.stringContaining('"type":"session_ended"')
+      );
+      expect(defaultClientWs.send).toHaveBeenCalledWith(
+        expect.stringContaining('"reason":"timeout"')
+      );
+      expect(defaultClientWs.send).toHaveBeenCalledWith(
+        expect.stringContaining('"clear_session_cookie":true')
+      );
     });
 
     it('should update client state', async () => {
@@ -643,10 +680,9 @@ describe('session service', () => {
     it('should record session duration metric', async () => {
       await session.endSession(mockRedis, 'timeout', processQueueFn);
 
-      expect(mockMetrics.sessionDurationHistogram.record).toHaveBeenCalledWith(
-        expect.any(Number),
-        { reason: 'timeout' }
-      );
+      expect(mockMetrics.sessionDurationHistogram.record).toHaveBeenCalledWith(expect.any(Number), {
+        reason: 'timeout',
+      });
       expect(mockMetrics.sessionsEndedCounter.add).toHaveBeenCalledWith(1, { reason: 'timeout' });
     });
 
@@ -654,14 +690,19 @@ describe('session service', () => {
       await session.endSession(mockRedis, 'timeout', processQueueFn);
 
       expect(mockTracer.startSpan).toHaveBeenCalledWith('session.end', expect.any(Object));
-      expect(mockSpan.setAttribute).toHaveBeenCalledWith('session.duration_seconds', expect.any(Number));
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+        'session.duration_seconds',
+        expect.any(Number)
+      );
       expect(mockSpan.end).toHaveBeenCalled();
     });
 
     it('should handle different end reasons', async () => {
       await session.endSession(mockRedis, 'container_exit', processQueueFn);
 
-      expect(mockMetrics.sessionsEndedCounter.add).toHaveBeenCalledWith(1, { reason: 'container_exit' });
+      expect(mockMetrics.sessionsEndedCounter.add).toHaveBeenCalledWith(1, {
+        reason: 'container_exit',
+      });
     });
 
     it('should handle missing client WebSocket gracefully', async () => {
@@ -696,7 +737,7 @@ describe('session service', () => {
         inviteToken: 'invite-123',
         ip: '192.168.1.1',
         userAgent: 'Test',
-        joinedAt: new Date()
+        joinedAt: new Date(),
       };
       clients.set(mockWs, client);
       queueArray.push('client-1');

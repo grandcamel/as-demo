@@ -19,7 +19,7 @@ const require = createRequire(import.meta.url);
 const mockFs = {
   mkdirSync: vi.fn(),
   writeFileSync: vi.fn(),
-  unlinkSync: vi.fn()
+  unlinkSync: vi.fn(),
 };
 
 describe('env-file', () => {
@@ -46,7 +46,7 @@ describe('env-file', () => {
       id: fsPath,
       filename: fsPath,
       loaded: true,
-      exports: mockFs
+      exports: mockFs,
     };
 
     // Now require the module - it will use our mocked fs
@@ -62,72 +62,90 @@ describe('env-file', () => {
       hostPath: '/tmp/session-env',
       credentials: {
         API_TOKEN: 'secret-token',
-        API_EMAIL: 'user@example.com'
-      }
+        API_EMAIL: 'user@example.com',
+      },
     };
 
     describe('validation', () => {
       it('should throw error for empty sessionId', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          sessionId: ''
-        })).toThrow('sessionId must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            sessionId: '',
+          })
+        ).toThrow('sessionId must be a non-empty string');
       });
 
       it('should throw error for null sessionId', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          sessionId: null
-        })).toThrow('sessionId must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            sessionId: null,
+          })
+        ).toThrow('sessionId must be a non-empty string');
       });
 
       it('should throw error for non-string sessionId', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          sessionId: 12345
-        })).toThrow('sessionId must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            sessionId: 12345,
+          })
+        ).toThrow('sessionId must be a non-empty string');
       });
 
       it('should throw error for empty containerPath', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          containerPath: ''
-        })).toThrow('containerPath must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            containerPath: '',
+          })
+        ).toThrow('containerPath must be a non-empty string');
       });
 
       it('should throw error for null containerPath', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          containerPath: null
-        })).toThrow('containerPath must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            containerPath: null,
+          })
+        ).toThrow('containerPath must be a non-empty string');
       });
 
       it('should throw error for empty hostPath', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          hostPath: ''
-        })).toThrow('hostPath must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            hostPath: '',
+          })
+        ).toThrow('hostPath must be a non-empty string');
       });
 
       it('should throw error for null hostPath', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          hostPath: null
-        })).toThrow('hostPath must be a non-empty string');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            hostPath: null,
+          })
+        ).toThrow('hostPath must be a non-empty string');
       });
 
       it('should throw error for null credentials', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          credentials: null
-        })).toThrow('credentials must be an object');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            credentials: null,
+          })
+        ).toThrow('credentials must be an object');
       });
 
       it('should throw error for non-object credentials', () => {
-        expect(() => createSessionEnvFile({
-          ...validOptions,
-          credentials: 'string'
-        })).toThrow('credentials must be an object');
+        expect(() =>
+          createSessionEnvFile({
+            ...validOptions,
+            credentials: 'string',
+          })
+        ).toThrow('credentials must be an object');
       });
     });
 
@@ -135,16 +153,17 @@ describe('env-file', () => {
       it('should create directory with recursive option', () => {
         createSessionEnvFile(validOptions);
 
-        expect(mockFs.mkdirSync).toHaveBeenCalledWith(
-          validOptions.containerPath,
-          { recursive: true }
-        );
+        expect(mockFs.mkdirSync).toHaveBeenCalledWith(validOptions.containerPath, {
+          recursive: true,
+        });
       });
 
       it('should ignore EEXIST error', () => {
         const error = new Error('Directory exists');
         error.code = 'EEXIST';
-        mockFs.mkdirSync.mockImplementation(() => { throw error; });
+        mockFs.mkdirSync.mockImplementation(() => {
+          throw error;
+        });
 
         expect(() => createSessionEnvFile(validOptions)).not.toThrow();
       });
@@ -152,10 +171,13 @@ describe('env-file', () => {
       it('should throw other mkdir errors', () => {
         const error = new Error('Permission denied');
         error.code = 'EACCES';
-        mockFs.mkdirSync.mockImplementation(() => { throw error; });
+        mockFs.mkdirSync.mockImplementation(() => {
+          throw error;
+        });
 
-        expect(() => createSessionEnvFile(validOptions))
-          .toThrow('Failed to create env directory: Permission denied');
+        expect(() => createSessionEnvFile(validOptions)).toThrow(
+          'Failed to create env directory: Permission denied'
+        );
       });
     });
 
@@ -168,11 +190,9 @@ describe('env-file', () => {
           `session-${validOptions.sessionId}.env`
         );
 
-        expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-          expectedPath,
-          expect.any(String),
-          { mode: 0o600 }
-        );
+        expect(mockFs.writeFileSync).toHaveBeenCalledWith(expectedPath, expect.any(String), {
+          mode: 0o600,
+        });
       });
 
       it('should write credentials as KEY=value format', () => {
@@ -192,8 +212,8 @@ describe('env-file', () => {
             KEEP: 'value',
             EMPTY: '',
             NULL: null,
-            UNDEFINED: undefined
-          }
+            UNDEFINED: undefined,
+          },
         });
 
         const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
@@ -217,8 +237,9 @@ describe('env-file', () => {
           throw new Error('Disk full');
         });
 
-        expect(() => createSessionEnvFile(validOptions))
-          .toThrow('Failed to write env file: Disk full');
+        expect(() => createSessionEnvFile(validOptions)).toThrow(
+          'Failed to write env file: Disk full'
+        );
       });
     });
 
@@ -234,9 +255,7 @@ describe('env-file', () => {
       it('should return hostPath with filename', () => {
         const result = createSessionEnvFile(validOptions);
 
-        expect(result.hostPath).toBe(
-          path.join(validOptions.hostPath, 'session-session-123.env')
-        );
+        expect(result.hostPath).toBe(path.join(validOptions.hostPath, 'session-session-123.env'));
       });
 
       it('should return cleanup function', () => {
@@ -260,7 +279,9 @@ describe('env-file', () => {
 
         const error = new Error('File not found');
         error.code = 'ENOENT';
-        mockFs.unlinkSync.mockImplementation(() => { throw error; });
+        mockFs.unlinkSync.mockImplementation(() => {
+          throw error;
+        });
 
         expect(() => result.cleanup()).not.toThrow();
       });
@@ -271,7 +292,9 @@ describe('env-file', () => {
 
         const error = new Error('Permission denied');
         error.code = 'EACCES';
-        mockFs.unlinkSync.mockImplementation(() => { throw error; });
+        mockFs.unlinkSync.mockImplementation(() => {
+          throw error;
+        });
 
         result.cleanup();
 
@@ -287,7 +310,7 @@ describe('env-file', () => {
       it('should handle empty credentials object', () => {
         const result = createSessionEnvFile({
           ...validOptions,
-          credentials: {}
+          credentials: {},
         });
 
         const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
@@ -300,8 +323,8 @@ describe('env-file', () => {
           ...validOptions,
           credentials: {
             TOKEN: 'value=with=equals',
-            COMPLEX: 'has spaces and $pecial'
-          }
+            COMPLEX: 'has spaces and $pecial',
+          },
         });
 
         const writtenContent = mockFs.writeFileSync.mock.calls[0][1];
@@ -315,23 +338,26 @@ describe('env-file', () => {
   describe('createEnvFileManager', () => {
     const validManagerOptions = {
       containerPath: '/run/session-env',
-      hostPath: '/tmp/session-env'
+      hostPath: '/tmp/session-env',
     };
 
     describe('validation', () => {
       it('should throw error for missing containerPath', () => {
-        expect(() => createEnvFileManager({ hostPath: '/tmp' }))
-          .toThrow('containerPath and hostPath are required');
+        expect(() => createEnvFileManager({ hostPath: '/tmp' })).toThrow(
+          'containerPath and hostPath are required'
+        );
       });
 
       it('should throw error for missing hostPath', () => {
-        expect(() => createEnvFileManager({ containerPath: '/run' }))
-          .toThrow('containerPath and hostPath are required');
+        expect(() => createEnvFileManager({ containerPath: '/run' })).toThrow(
+          'containerPath and hostPath are required'
+        );
       });
 
       it('should throw error for empty paths', () => {
-        expect(() => createEnvFileManager({ containerPath: '', hostPath: '' }))
-          .toThrow('containerPath and hostPath are required');
+        expect(() => createEnvFileManager({ containerPath: '', hostPath: '' })).toThrow(
+          'containerPath and hostPath are required'
+        );
       });
     });
 
@@ -339,10 +365,9 @@ describe('env-file', () => {
       it('should create directory on initialization', () => {
         createEnvFileManager(validManagerOptions);
 
-        expect(mockFs.mkdirSync).toHaveBeenCalledWith(
-          validManagerOptions.containerPath,
-          { recursive: true }
-        );
+        expect(mockFs.mkdirSync).toHaveBeenCalledWith(validManagerOptions.containerPath, {
+          recursive: true,
+        });
       });
 
       it('should log warning on mkdir error (non-EEXIST)', () => {
@@ -350,7 +375,9 @@ describe('env-file', () => {
 
         const error = new Error('Permission denied');
         error.code = 'EACCES';
-        mockFs.mkdirSync.mockImplementation(() => { throw error; });
+        mockFs.mkdirSync.mockImplementation(() => {
+          throw error;
+        });
 
         createEnvFileManager(validManagerOptions);
 

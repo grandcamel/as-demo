@@ -25,9 +25,19 @@ export default defineConfig({
         'lib/session.js': { lines: 95, functions: 100, branches: 95, statements: 95 },
 
         // Config platforms are 100% covered
-        'config/platforms/confluence.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/platforms/confluence.js': {
+          lines: 100,
+          functions: 100,
+          branches: 100,
+          statements: 100,
+        },
         'config/platforms/jira.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
-        'config/platforms/splunk.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
+        'config/platforms/splunk.js': {
+          lines: 100,
+          functions: 100,
+          branches: 100,
+          statements: 100,
+        },
         'config/cross-platform.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
         'config/metrics.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
         'config/schema.js': { lines: 95, functions: 50, branches: 100, statements: 95 },

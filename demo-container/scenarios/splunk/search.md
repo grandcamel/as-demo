@@ -5,21 +5,25 @@ SPL queries and visualizations in Splunk.
 ## Example Prompts
 
 ### Basic Search
+
 ```
 Search for errors in the last 15 minutes
 ```
 
 ### Filter by Source
+
 ```
 Find logs from the web server
 ```
 
 ### Statistics
+
 ```
 Show me the count of errors by service
 ```
 
 ### Time Chart
+
 ```
 Create a time chart of request volume over the last hour
 ```

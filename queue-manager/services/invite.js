@@ -12,7 +12,7 @@ const state = require('./state');
 // Invite brute-force protection using shared library
 const inviteRateLimiter = createInviteRateLimiter({
   windowMs: config.INVITE_RATE_LIMIT_WINDOW_MS,
-  maxAttempts: config.INVITE_RATE_LIMIT_MAX_ATTEMPTS
+  maxAttempts: config.INVITE_RATE_LIMIT_MAX_ATTEMPTS,
 });
 
 /**
@@ -42,7 +42,7 @@ function recordFailedInviteAttempt(ip) {
 async function validateInvite(redis, token, clientIp = null) {
   const tracer = getTracer();
   const span = tracer?.startSpan('invite.validate', {
-    attributes: { 'invite.token_prefix': token?.slice(0, 8) || 'none' }
+    attributes: { 'invite.token_prefix': token?.slice(0, 8) || 'none' },
   });
 
   try {
@@ -53,7 +53,7 @@ async function validateInvite(redis, token, clientIp = null) {
       return {
         valid: false,
         reason: 'invalid',
-        message: 'This invite link is malformed or invalid.'
+        message: 'This invite link is malformed or invalid.',
       };
     }
 
@@ -66,7 +66,7 @@ async function validateInvite(redis, token, clientIp = null) {
       return {
         valid: false,
         reason: 'not_found',
-        message: 'This invite link does not exist. Please check the URL or request a new invite.'
+        message: 'This invite link does not exist. Please check the URL or request a new invite.',
       };
     }
 
@@ -79,17 +79,24 @@ async function validateInvite(redis, token, clientIp = null) {
       return {
         valid: false,
         reason: 'revoked',
-        message: 'This invite link has been revoked by an administrator.'
+        message: 'This invite link has been revoked by an administrator.',
       };
     }
 
     // Check if already used
-    if (invite.status === 'used' || (invite.useCount >= invite.maxUses)) {
+    if (invite.status === 'used' || invite.useCount >= invite.maxUses) {
       const activeSession = state.getActiveSession();
 
       // Allow rejoin if there's an active session from the same IP using this invite
-      if (clientIp && activeSession && activeSession.inviteToken === token && activeSession.ip === clientIp) {
-        console.log(`Allowing rejoin for used invite ${token.slice(0, 8)}... from same IP ${clientIp} (awaitingReconnect: ${activeSession.awaitingReconnect || false})`);
+      if (
+        clientIp &&
+        activeSession &&
+        activeSession.inviteToken === token &&
+        activeSession.ip === clientIp
+      ) {
+        console.log(
+          `Allowing rejoin for used invite ${token.slice(0, 8)}... from same IP ${clientIp} (awaitingReconnect: ${activeSession.awaitingReconnect || false})`
+        );
         invitesValidatedCounter?.add(1, { status: 'rejoin' });
         span?.setAttribute('invite.status', 'rejoin');
         return { valid: true, data: invite, rejoin: true };
@@ -98,7 +105,9 @@ async function validateInvite(redis, token, clientIp = null) {
       // Also allow if there's a pending session token from the same IP
       for (const [, pending] of state.pendingSessionTokens) {
         if (pending.inviteToken === token && pending.ip === clientIp) {
-          console.log(`Allowing rejoin for pending invite ${token.slice(0, 8)}... from same IP ${clientIp}`);
+          console.log(
+            `Allowing rejoin for pending invite ${token.slice(0, 8)}... from same IP ${clientIp}`
+          );
           invitesValidatedCounter?.add(1, { status: 'rejoin' });
           span?.setAttribute('invite.status', 'rejoin');
           return { valid: true, data: invite, rejoin: true };
@@ -110,7 +119,7 @@ async function validateInvite(redis, token, clientIp = null) {
       return {
         valid: false,
         reason: 'used',
-        message: 'This invite link has already been used. Each invite can only be used once.'
+        message: 'This invite link has already been used. Each invite can only be used once.',
       };
     }
 
@@ -125,7 +134,7 @@ async function validateInvite(redis, token, clientIp = null) {
       return {
         valid: false,
         reason: 'expired',
-        message: 'This invite link has expired. Please request a new invite.'
+        message: 'This invite link has expired. Please request a new invite.',
       };
     }
 
@@ -168,7 +177,7 @@ async function recordInviteUsage(redis, session, endedAt, endReason, auditRetent
       queueWaitMs: session.queueWaitMs,
       ip: session.ip,
       userAgent: session.userAgent,
-      errors: session.errors || []
+      errors: session.errors || [],
     });
 
     // Update usage tracking
@@ -182,12 +191,13 @@ async function recordInviteUsage(redis, session, endedAt, endReason, auditRetent
     const auditRetentionMs = auditRetentionDays * 24 * 60 * 60 * 1000;
     const ttlSeconds = Math.max(
       Math.floor((expiresAtMs - Date.now() + auditRetentionMs) / 1000),
-      86400  // At least 1 day
+      86400 // At least 1 day
     );
 
     await redis.set(inviteKey, JSON.stringify(invite), 'EX', ttlSeconds);
-    console.log(`Recorded usage for invite ${session.inviteToken.slice(0, 8)}..., status: ${invite.status}`);
-
+    console.log(
+      `Recorded usage for invite ${session.inviteToken.slice(0, 8)}..., status: ${invite.status}`
+    );
   } catch (err) {
     console.error('Error recording invite usage:', err.message);
   }
@@ -205,5 +215,5 @@ module.exports = {
   recordFailedInviteAttempt,
   validateInvite,
   recordInviteUsage,
-  cleanupRateLimits
+  cleanupRateLimits,
 };

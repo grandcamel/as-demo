@@ -47,6 +47,7 @@ There's a spike in 500 errors in the payment service.
 ## Expected Behavior
 
 Claude will:
+
 1. Query Splunk using the `/splunk-search` skill
 2. Search Confluence using the `/confluence-search` skill
 3. Create a JIRA issue using the `/jira-issue` skill

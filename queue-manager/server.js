@@ -67,7 +67,7 @@ redis.on('connect', () => {
 // Initialize metrics
 initMetrics(
   () => state.queue.length,
-  () => state.getActiveSession() ? 1 : 0
+  () => (state.getActiveSession() ? 1 : 0)
 );
 
 // Middleware
@@ -89,21 +89,23 @@ app.use((req, res, next) => {
 });
 
 // Security headers via Helmet
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-      frameSrc: ["'self'"],
-      frameAncestors: ["'self'"],
-    }
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'", 'wss:', 'ws:'],
+        frameSrc: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  })
+);
 
 // Serve static files (CSS, JS)
 app.use('/static', express.static(path.join(__dirname, 'static')));
@@ -125,7 +127,9 @@ if (config.SESSION_SECRET === 'change-me-in-production') {
     console.error('FATAL: SESSION_SECRET must be set in production');
     process.exit(1);
   } else {
-    console.warn('WARNING: Using default SESSION_SECRET. Set SESSION_SECRET env var for secure sessions.');
+    console.warn(
+      'WARNING: Using default SESSION_SECRET. Set SESSION_SECRET env var for secure sessions.'
+    );
   }
 }
 
@@ -138,10 +142,13 @@ try {
 }
 
 // Periodic cleanup of stale rate limit entries (every 5 minutes)
-setInterval(() => {
-  websocketHandlers.cleanupRateLimits();
-  cleanupInviteRateLimits();
-}, 5 * 60 * 1000);
+setInterval(
+  () => {
+    websocketHandlers.cleanupRateLimits();
+    cleanupInviteRateLimits();
+  },
+  5 * 60 * 1000
+);
 
 // Log startup info
 console.log('AS-Demo Queue Manager starting...');

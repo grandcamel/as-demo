@@ -129,11 +129,12 @@ describe('cross-platform config', () => {
         title: 'Test',
         icon: '🧪',
         description: 'Test',
-        requiredPlatforms: ['confluence', 'invalid-platform']
+        requiredPlatforms: ['confluence', 'invalid-platform'],
       };
 
-      expect(() => crossPlatform.validateScenarios())
-        .toThrow("Cross-platform scenario 'invalid-test' has invalid platform requirements: invalid-platform");
+      expect(() => crossPlatform.validateScenarios()).toThrow(
+        "Cross-platform scenario 'invalid-test' has invalid platform requirements: invalid-platform"
+      );
 
       // Restore
       delete crossPlatform.SCENARIO_NAMES['invalid-test'];

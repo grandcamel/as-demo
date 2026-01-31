@@ -17,7 +17,6 @@ groups:
     folder: AS-Demo
     interval: 30s
     rules:
-
       # Health endpoint unavailable
       - uid: health-endpoint-down
         title: Health Endpoint Unavailable
@@ -58,9 +57,9 @@ groups:
         execErrState: Alerting
         for: 1m
         annotations:
-          summary: "AS-Demo health endpoint is not responding"
-          description: "The /api/health endpoint has been unavailable for more than 1 minute."
-          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#troubleshooting"
+          summary: 'AS-Demo health endpoint is not responding'
+          description: 'The /api/health endpoint has been unavailable for more than 1 minute.'
+          runbook_url: 'https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#troubleshooting'
         labels:
           severity: critical
           service: as-demo
@@ -106,9 +105,9 @@ groups:
         execErrState: Alerting
         for: 30s
         annotations:
-          summary: "AS-Demo Redis is unhealthy"
-          description: "Redis has been unreachable for more than 30 seconds. Sessions and queue state may be affected."
-          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#redis-issues"
+          summary: 'AS-Demo Redis is unhealthy'
+          description: 'Redis has been unreachable for more than 30 seconds. Sessions and queue state may be affected.'
+          runbook_url: 'https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#redis-issues'
         labels:
           severity: critical
           service: as-demo
@@ -154,9 +153,9 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: "AS-Demo queue is nearly full"
-          description: "The demo queue is at {{ $values.A }}% capacity. Users may experience long wait times."
-          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#queue-management"
+          summary: 'AS-Demo queue is nearly full'
+          description: 'The demo queue is at {{ $values.A }}% capacity. Users may experience long wait times.'
+          runbook_url: 'https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#queue-management'
         labels:
           severity: warning
           service: as-demo
@@ -202,9 +201,9 @@ groups:
         execErrState: Error
         for: 30m
         annotations:
-          summary: "High session timeout rate detected"
-          description: "More than 10% of sessions are timing out. This may indicate user experience issues."
-          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#session-issues"
+          summary: 'High session timeout rate detected'
+          description: 'More than 10% of sessions are timing out. This may indicate user experience issues.'
+          runbook_url: 'https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#session-issues'
         labels:
           severity: warning
           service: as-demo
@@ -250,9 +249,9 @@ groups:
         execErrState: Error
         for: 2m
         annotations:
-          summary: "AS-Demo container is unhealthy"
-          description: "One or more AS-Demo containers have reported unhealthy status for more than 2 minutes."
-          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#container-issues"
+          summary: 'AS-Demo container is unhealthy'
+          description: 'One or more AS-Demo containers have reported unhealthy status for more than 2 minutes.'
+          runbook_url: 'https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#container-issues'
         labels:
           severity: warning
           service: as-demo
@@ -298,9 +297,9 @@ groups:
         execErrState: Error
         for: 1h
         annotations:
-          summary: "AS-Demo SSL certificate expiring soon"
-          description: "The SSL certificate will expire in {{ $values.A }} days. Please renew it."
-          runbook_url: "https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#ssl-renewal"
+          summary: 'AS-Demo SSL certificate expiring soon'
+          description: 'The SSL certificate will expire in {{ $values.A }} days. Please renew it.'
+          runbook_url: 'https://github.com/grandcamel/as-demo/blob/main/docs/DEPLOYMENT.md#ssl-renewal'
         labels:
           severity: warning
           service: as-demo

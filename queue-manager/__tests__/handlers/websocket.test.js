@@ -45,7 +45,7 @@ describe('websocket handler', () => {
 
     rateLimiterMock = {
       check: vi.fn(() => ({ allowed: true, remaining: 9 })),
-      cleanup: vi.fn()
+      cleanup: vi.fn(),
     };
 
     // Clear require cache for all modules we're testing
@@ -56,12 +56,18 @@ describe('websocket handler', () => {
       '../../services/session',
       '../../config',
       'uuid',
-      '@demo-platform/queue-manager-core'
-    ].map(p => {
-      try { return require.resolve(p); } catch { return null; }
-    }).filter(Boolean);
+      '@demo-platform/queue-manager-core',
+    ]
+      .map((p) => {
+        try {
+          return require.resolve(p);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
-    paths.forEach(p => delete require.cache[p]);
+    paths.forEach((p) => delete require.cache[p]);
 
     // Mock uuid
     const uuidPath = require.resolve('uuid');
@@ -69,7 +75,7 @@ describe('websocket handler', () => {
       id: uuidPath,
       filename: uuidPath,
       loaded: true,
-      exports: { v4: vi.fn(() => 'mock-client-id') }
+      exports: { v4: vi.fn(() => 'mock-client-id') },
     };
 
     // Mock @demo-platform/queue-manager-core
@@ -78,7 +84,7 @@ describe('websocket handler', () => {
       id: corePath,
       filename: corePath,
       loaded: true,
-      exports: { createConnectionRateLimiter: vi.fn(() => rateLimiterMock) }
+      exports: { createConnectionRateLimiter: vi.fn(() => rateLimiterMock) },
     };
 
     // Mock config
@@ -93,8 +99,8 @@ describe('websocket handler', () => {
         ALLOWED_ORIGINS: ['http://localhost:8080'],
         ENABLED_PLATFORMS: ['confluence', 'jira'],
         DISCONNECT_GRACE_MS: 10000,
-        getConfiguredPlatforms: vi.fn(() => ['confluence'])
-      }
+        getConfiguredPlatforms: vi.fn(() => ['confluence']),
+      },
     };
 
     // Mock state
@@ -110,8 +116,8 @@ describe('websocket handler', () => {
         setActiveSession: mockSetActiveSession,
         clearDisconnectGraceTimeout: mockClearDisconnectGraceTimeout,
         setDisconnectGraceTimeout: mockSetDisconnectGraceTimeout,
-        pendingSessionTokens
-      }
+        pendingSessionTokens,
+      },
     };
 
     // Mock queue service
@@ -124,8 +130,8 @@ describe('websocket handler', () => {
         joinQueue: vi.fn(),
         leaveQueue: vi.fn(),
         broadcastQueueUpdate: vi.fn(),
-        processQueue: vi.fn()
-      }
+        processQueue: vi.fn(),
+      },
     };
 
     // Mock session service
@@ -134,7 +140,7 @@ describe('websocket handler', () => {
       id: sessionPath,
       filename: sessionPath,
       loaded: true,
-      exports: { endSession: vi.fn() }
+      exports: { endSession: vi.fn() },
     };
 
     // Now require the modules
@@ -146,17 +152,17 @@ describe('websocket handler', () => {
     mockWs = {
       send: vi.fn(),
       close: vi.fn(),
-      on: vi.fn()
+      on: vi.fn(),
     };
 
     mockWss = {
-      on: vi.fn()
+      on: vi.fn(),
     };
 
     mockRedis = {
       get: vi.fn(),
       set: vi.fn(),
-      del: vi.fn()
+      del: vi.fn(),
     };
   });
 
@@ -180,9 +186,9 @@ describe('websocket handler', () => {
       const mockReq = {
         headers: {
           origin: 'http://localhost:8080',
-          'user-agent': 'Test Browser'
+          'user-agent': 'Test Browser',
         },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
@@ -195,9 +201,9 @@ describe('websocket handler', () => {
       const mockReq = {
         headers: {
           origin: 'http://localhost:8080',
-          'user-agent': 'Test Browser'
+          'user-agent': 'Test Browser',
         },
-        socket: { remoteAddress: '192.168.1.1' }
+        socket: { remoteAddress: '192.168.1.1' },
       };
 
       connectionHandler(mockWs, mockReq);
@@ -215,9 +221,9 @@ describe('websocket handler', () => {
         headers: {
           origin: 'http://localhost:8080',
           'x-forwarded-for': '10.0.0.1, 192.168.1.1',
-          'user-agent': 'Test'
+          'user-agent': 'Test',
         },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
@@ -229,7 +235,7 @@ describe('websocket handler', () => {
     it('should send initial status on connection', () => {
       const mockReq = {
         headers: { origin: 'http://localhost:8080' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
@@ -245,26 +251,32 @@ describe('websocket handler', () => {
 
       const mockReq = {
         headers: { origin: 'http://localhost:8080' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       handler(mockWs, mockReq);
 
-      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('ERR_RATE_LIMITED_CONNECTION'));
+      expect(mockWs.close).toHaveBeenCalledWith(
+        1008,
+        expect.stringContaining('ERR_RATE_LIMITED_CONNECTION')
+      );
     });
 
     it('should reject connection with invalid origin', () => {
       const mockReq = {
         headers: {
           origin: 'http://evil.com',
-          'user-agent': 'Test'
+          'user-agent': 'Test',
         },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
 
-      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('ERR_ORIGIN_NOT_ALLOWED'));
+      expect(mockWs.close).toHaveBeenCalledWith(
+        1008,
+        expect.stringContaining('ERR_ORIGIN_NOT_ALLOWED')
+      );
     });
 
     it('should reject connection without origin in production', () => {
@@ -273,12 +285,15 @@ describe('websocket handler', () => {
 
       const mockReq = {
         headers: { 'user-agent': 'Test' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
 
-      expect(mockWs.close).toHaveBeenCalledWith(1008, expect.stringContaining('ERR_ORIGIN_REQUIRED'));
+      expect(mockWs.close).toHaveBeenCalledWith(
+        1008,
+        expect.stringContaining('ERR_ORIGIN_REQUIRED')
+      );
 
       process.env.NODE_ENV = originalEnv;
     });
@@ -289,7 +304,7 @@ describe('websocket handler', () => {
 
       const mockReq = {
         headers: { 'user-agent': 'Test' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
@@ -303,12 +318,12 @@ describe('websocket handler', () => {
     it('should register message, close, and error handlers', () => {
       const mockReq = {
         headers: { origin: 'http://localhost:8080' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       connectionHandler(mockWs, mockReq);
 
-      const onCalls = mockWs.on.mock.calls.map(c => c[0]);
+      const onCalls = mockWs.on.mock.calls.map((c) => c[0]);
       expect(onCalls).toContain('message');
       expect(onCalls).toContain('close');
       expect(onCalls).toContain('error');
@@ -325,12 +340,12 @@ describe('websocket handler', () => {
 
       const mockReq = {
         headers: { origin: 'http://localhost:8080' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
       connectionHandler(mockWs, mockReq);
 
       // Get message handler
-      const messageCall = mockWs.on.mock.calls.find(c => c[0] === 'message');
+      const messageCall = mockWs.on.mock.calls.find((c) => c[0] === 'message');
       messageHandler = messageCall[1];
     });
 
@@ -364,20 +379,14 @@ describe('websocket handler', () => {
     it('should send error for unknown message type', async () => {
       await messageHandler(JSON.stringify({ type: 'unknown_type' }));
 
-      expect(mockWs.send).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"error"')
-      );
-      expect(mockWs.send).toHaveBeenCalledWith(
-        expect.stringContaining('Unknown message type')
-      );
+      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"error"'));
+      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('Unknown message type'));
     });
 
     it('should send error for invalid JSON', async () => {
       await messageHandler('not valid json');
 
-      expect(mockWs.send).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"error"')
-      );
+      expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"error"'));
     });
   });
 
@@ -391,11 +400,11 @@ describe('websocket handler', () => {
 
       const mockReq = {
         headers: { origin: 'http://localhost:8080' },
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
       connectionHandler(mockWs, mockReq);
 
-      const closeCall = mockWs.on.mock.calls.find(c => c[0] === 'close');
+      const closeCall = mockWs.on.mock.calls.find((c) => c[0] === 'close');
       closeHandler = closeCall[1];
     });
 
@@ -421,7 +430,7 @@ describe('websocket handler', () => {
 
       state.getActiveSession.mockReturnValue({
         clientId: 'mock-client-id',
-        sessionId: 'session-123'
+        sessionId: 'session-123',
       });
 
       closeHandler();

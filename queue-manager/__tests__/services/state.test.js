@@ -39,7 +39,7 @@ describe('state', () => {
           clientId: 'client-1',
           sessionId: 'session-123',
           sessionToken: 'token-abc',
-          startedAt: Date.now()
+          startedAt: Date.now(),
         };
 
         state.setActiveSession(session);
@@ -287,7 +287,7 @@ describe('state', () => {
           clientId: 'client-1',
           inviteToken: 'invite-abc',
           ip: '192.168.1.1',
-          createdAt: Date.now()
+          createdAt: Date.now(),
         };
 
         state.pendingSessionTokens.set('pending-token', pending);

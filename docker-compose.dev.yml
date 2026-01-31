@@ -9,7 +9,7 @@ version: '3.8'
 services:
   nginx:
     ports:
-      - "8080:80"    # Development port
+      - '8080:80' # Development port
     volumes:
       - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
 
@@ -24,20 +24,20 @@ services:
       - ./queue-manager:/app
       - queue-manager-node-modules:/app/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
-    command: ["node", "--watch", "--require", "./instrumentation.js", "server.js"]
+    command: ['node', '--watch', '--require', './instrumentation.js', 'server.js']
 
   lgtm:
     ports:
-      - "3001:3000"  # Grafana UI for direct access
-      - "3100:3100"  # Loki HTTP API (for local telemetry queries)
-      - "4317:4317"  # OTLP gRPC (for local telemetry export)
-      - "4318:4318"  # OTLP HTTP (for local telemetry export)
+      - '3001:3000' # Grafana UI for direct access
+      - '3100:3100' # Loki HTTP API (for local telemetry queries)
+      - '4317:4317' # OTLP gRPC (for local telemetry export)
+      - '4318:4318' # OTLP HTTP (for local telemetry export)
 
   splunk:
-    profiles: ["splunk", "full"]
+    profiles: ['splunk', 'full']
     ports:
-      - "8000:8000"  # Splunk Web UI
-      - "8089:8089"  # Splunk REST API
+      - '8000:8000' # Splunk Web UI
+      - '8089:8089' # Splunk REST API
 
 networks:
   demo-network:

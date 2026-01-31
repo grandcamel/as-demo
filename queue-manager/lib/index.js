@@ -37,5 +37,5 @@ module.exports = {
 
   // Metrics
   createMetrics: metrics.createMetrics,
-  createSpanUtils: metrics.createSpanUtils
+  createSpanUtils: metrics.createSpanUtils,
 };

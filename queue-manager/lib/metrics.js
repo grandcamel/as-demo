@@ -35,11 +35,7 @@ try {
  * metrics.sessionDuration.record(300, { reason: 'timeout' });
  */
 function createMetrics(options) {
-  const {
-    serviceName,
-    getQueueLength,
-    getActiveSessionCount
-  } = options;
+  const { serviceName, getQueueLength, getActiveSessionCount } = options;
 
   if (!serviceName || typeof serviceName !== 'string') {
     throw new Error('serviceName must be a non-empty string');
@@ -55,7 +51,7 @@ function createMetrics(options) {
   const noopMetric = {
     add: () => {},
     record: () => {},
-    addCallback: () => {}
+    addCallback: () => {},
   };
 
   // Return no-op metrics if OTel not available
@@ -74,7 +70,7 @@ function createMetrics(options) {
       ttydSpawn: noopMetric,
       sandboxCleanup: noopMetric,
       // Tracer
-      getTracer: () => null
+      getTracer: () => null,
     };
   }
 
@@ -151,7 +147,7 @@ function createMetrics(options) {
     ttydSpawn,
     sandboxCleanup,
     // Tracer
-    getTracer
+    getTracer,
   };
 }
 
@@ -215,11 +211,11 @@ function createSpanUtils(metricsManager) {
 
   return {
     wrap,
-    start
+    start,
   };
 }
 
 module.exports = {
   createMetrics,
-  createSpanUtils
+  createSpanUtils,
 };

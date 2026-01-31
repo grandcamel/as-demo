@@ -68,9 +68,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "none"
         },
@@ -113,9 +111,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "none"
         },
@@ -158,9 +154,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "s"
         },
@@ -223,9 +217,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "ops"
         },
@@ -234,7 +226,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
       "id": 5,
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
         "tooltip": { "mode": "single", "sort": "none" }
       },
       "targets": [
@@ -281,9 +278,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "decmbytes"
         },
@@ -345,9 +340,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "s"
         },
@@ -356,7 +349,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
       "id": 7,
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
         "tooltip": { "mode": "single", "sort": "none" }
       },
       "targets": [
@@ -409,9 +407,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "s"
         },
@@ -420,7 +416,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
       "id": 8,
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
         "tooltip": { "mode": "single", "sort": "none" }
       },
       "targets": [

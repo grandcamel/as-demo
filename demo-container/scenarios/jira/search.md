@@ -5,21 +5,25 @@ Find issues in JIRA using JQL (JIRA Query Language).
 ## Example Prompts
 
 ### Search by Project
+
 ```
 Show me all open issues in project DEMO
 ```
 
 ### Search by Assignee
+
 ```
 Find issues assigned to me
 ```
 
 ### Complex Search
+
 ```
 Find bugs created in the last week with priority High
 ```
 
 ### My Issues
+
 ```
 What are my open issues sorted by priority?
 ```

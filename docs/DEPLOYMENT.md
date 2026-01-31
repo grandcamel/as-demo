@@ -16,12 +16,12 @@ This guide covers deploying AS-Demo to production at `https://demo.assistant-ski
 
 ## Infrastructure Costs
 
-| Component | Monthly Cost |
-|-----------|-------------|
-| DigitalOcean Droplet (8GB) | $48 |
-| Reserved IP (optional) | $4 |
-| Let's Encrypt SSL | Free |
-| **Total** | $48-52 |
+| Component                  | Monthly Cost |
+| -------------------------- | ------------ |
+| DigitalOcean Droplet (8GB) | $48          |
+| Reserved IP (optional)     | $4           |
+| Let's Encrypt SSL          | Free         |
+| **Total**                  | $48-52       |
 
 ## Quick Start
 
@@ -100,6 +100,7 @@ demo.assistant-skills.dev -> 123.45.67.89
 ```
 
 Verify DNS propagation:
+
 ```bash
 dig demo.assistant-skills.dev +short
 # Should return your server IP
@@ -113,6 +114,7 @@ sudo ./scripts/deploy.sh --ssl
 ```
 
 This will:
+
 1. Start a temporary nginx server
 2. Request certificate via ACME challenge
 3. Configure automatic renewal via cron
@@ -237,11 +239,13 @@ make invite LABEL="Quick Demo" EXPIRES=1
 ### Health Endpoint Down
 
 1. Check container status:
+
    ```bash
    docker compose ps
    ```
 
 2. Check queue-manager logs:
+
    ```bash
    docker compose logs queue-manager --tail=100
    ```
@@ -254,11 +258,13 @@ make invite LABEL="Quick Demo" EXPIRES=1
 ### Redis Issues
 
 1. Check Redis container:
+
    ```bash
    docker exec as-demo-redis redis-cli ping
    ```
 
 2. Check Redis logs:
+
    ```bash
    docker compose logs redis
    ```
@@ -271,11 +277,13 @@ make invite LABEL="Quick Demo" EXPIRES=1
 ### SSL Certificate Issues
 
 1. Check certificate status:
+
    ```bash
    certbot certificates
    ```
 
 2. Force renewal:
+
    ```bash
    certbot renew --force-renewal
    docker compose restart nginx
@@ -289,11 +297,13 @@ make invite LABEL="Quick Demo" EXPIRES=1
 ### Container Issues
 
 1. Check container health:
+
    ```bash
    docker inspect as-demo-queue --format='{{.State.Health.Status}}'
    ```
 
 2. View container details:
+
    ```bash
    docker inspect as-demo-queue | jq '.[0].State'
    ```
@@ -309,6 +319,7 @@ make invite LABEL="Quick Demo" EXPIRES=1
 If queue is full:
 
 1. Check queue status:
+
    ```bash
    curl https://demo.assistant-skills.dev/api/status | jq
    ```
@@ -322,6 +333,7 @@ If queue is full:
 ### Session Issues
 
 1. Check session logs:
+
    ```bash
    docker compose logs queue-manager | grep -i session
    ```
@@ -339,6 +351,7 @@ If queue is full:
 Access at: `https://demo.assistant-skills.dev/grafana/` (requires active session)
 
 Available dashboards:
+
 - **Demo Home**: Overview of sessions, queue, and status
 - **Queue Operations**: Queue metrics and wait times
 - **Session Analytics**: Session duration and user behavior
@@ -348,17 +361,18 @@ Available dashboards:
 
 Alert rules are defined in `observability/alerting/health-alerts.yaml`:
 
-| Alert | Condition | Severity |
-|-------|-----------|----------|
-| Health Endpoint Down | Non-200 for >1 minute | Critical |
-| Redis Unhealthy | Unreachable for >30s | Critical |
-| Queue Near Capacity | >80% full for 5 minutes | Warning |
-| High Session Timeouts | >10% timeout rate | Warning |
-| SSL Certificate Expiring | <14 days remaining | Warning |
+| Alert                    | Condition               | Severity |
+| ------------------------ | ----------------------- | -------- |
+| Health Endpoint Down     | Non-200 for >1 minute   | Critical |
+| Redis Unhealthy          | Unreachable for >30s    | Critical |
+| Queue Near Capacity      | >80% full for 5 minutes | Warning  |
+| High Session Timeouts    | >10% timeout rate       | Warning  |
+| SSL Certificate Expiring | <14 days remaining      | Warning  |
 
 ### External Monitoring
 
 Recommended external monitors:
+
 - UptimeRobot or Pingdom for `https://demo.assistant-skills.dev/api/health`
 - SSL certificate monitoring (many free services available)
 

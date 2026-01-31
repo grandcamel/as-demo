@@ -4,11 +4,11 @@ arguments:
   - name: label
     description: Label for the invite (e.g., "Demo for Acme Corp")
     required: false
-    default: "CLI Invite"
+    default: 'CLI Invite'
   - name: expires
     description: Hours until invite expires (e.g., 24, 48, 168 for 1 week)
     required: false
-    default: "24"
+    default: '24'
 allowed_tools:
   - Bash
 ---

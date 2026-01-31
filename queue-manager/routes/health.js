@@ -35,8 +35,8 @@ function register(app, redis) {
       enabled_platforms: config.ENABLED_PLATFORMS,
       configured_platforms: config.getConfiguredPlatforms(),
       dependencies: {
-        redis: redisHealthy ? 'healthy' : 'unhealthy'
-      }
+        redis: redisHealthy ? 'healthy' : 'unhealthy',
+      },
     });
   });
 
@@ -45,7 +45,7 @@ function register(app, redis) {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json({
       status: 'ok',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   });
 
@@ -60,8 +60,8 @@ function register(app, redis) {
       status: redisHealthy ? 'ok' : 'error',
       timestamp: new Date().toISOString(),
       dependencies: {
-        redis: redisHealthy ? 'healthy' : 'unhealthy'
-      }
+        redis: redisHealthy ? 'healthy' : 'unhealthy',
+      },
     });
   });
 
@@ -73,7 +73,7 @@ function register(app, redis) {
       estimated_wait: state.queue.length * config.AVERAGE_SESSION_MINUTES + ' minutes',
       max_queue_size: config.MAX_QUEUE_SIZE,
       enabled_platforms: config.ENABLED_PLATFORMS,
-      configured_platforms: config.getConfiguredPlatforms()
+      configured_platforms: config.getConfiguredPlatforms(),
     });
   });
 
@@ -83,7 +83,7 @@ function register(app, redis) {
     res.json({
       enabled: config.ENABLED_PLATFORMS,
       configured: config.getConfiguredPlatforms(),
-      scenarios: scenarios
+      scenarios: scenarios,
     });
   });
 }

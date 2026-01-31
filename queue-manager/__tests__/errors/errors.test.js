@@ -99,7 +99,7 @@ describe('errors module', () => {
       const { DemoError, ErrorCodes } = errors;
 
       const error = new DemoError(ErrorCodes.INVALID_INPUT, 'Invalid field', {
-        details: { field: 'email', expected: 'string' }
+        details: { field: 'email', expected: 'string' },
       });
 
       expect(error.details).toEqual({ field: 'email', expected: 'string' });
@@ -109,13 +109,13 @@ describe('errors module', () => {
       const { DemoError, ErrorCodes } = errors;
 
       const error = new DemoError(ErrorCodes.INVALID_INPUT, 'Bad input', {
-        details: { field: 'token' }
+        details: { field: 'token' },
       });
 
       expect(error.toJSON()).toEqual({
         code: 'ERR_INVALID_INPUT',
         message: 'Bad input',
-        details: { field: 'token' }
+        details: { field: 'token' },
       });
     });
 
@@ -126,7 +126,7 @@ describe('errors module', () => {
 
       expect(error.toJSON()).toEqual({
         code: 'ERR_INVALID_INPUT',
-        message: 'Bad input'
+        message: 'Bad input',
       });
     });
 
@@ -175,7 +175,7 @@ describe('errors module', () => {
       const { RateLimitError, ErrorCodes } = errors;
 
       const error = new RateLimitError(ErrorCodes.RATE_LIMITED, 'Too many requests', {
-        retryAfter: 60
+        retryAfter: 60,
       });
 
       expect(error.name).toBe('RateLimitError');
@@ -261,7 +261,7 @@ describe('errors module', () => {
       const { WebSocketError, ErrorCodes } = errors;
 
       const error = new WebSocketError(ErrorCodes.RATE_LIMITED_CONNECTION, 'Rate limited', {
-        closeCode: 1013
+        closeCode: 1013,
       });
 
       expect(error.closeCode).toBe(1013);
@@ -277,7 +277,7 @@ describe('errors module', () => {
       mockReq = {};
       mockRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn()
+        json: vi.fn(),
       };
       mockNext = vi.fn();
     });
@@ -291,7 +291,7 @@ describe('errors module', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_INVALID_INPUT',
-        message: 'Bad input'
+        message: 'Bad input',
       });
     });
 
@@ -308,7 +308,7 @@ describe('errors module', () => {
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_INTERNAL',
-        message: 'Internal server error'
+        message: 'Internal server error',
       });
       expect(consoleSpy).toHaveBeenCalled();
 
@@ -328,7 +328,7 @@ describe('errors module', () => {
 
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_INTERNAL',
-        message: 'Detailed error message'
+        message: 'Detailed error message',
       });
 
       process.env.NODE_ENV = originalEnv;
@@ -345,7 +345,7 @@ describe('errors module', () => {
       expect(parsed).toEqual({
         type: 'error',
         code: 'ERR_INVALID_MESSAGE_FORMAT',
-        message: 'Bad format'
+        message: 'Bad format',
       });
     });
 
@@ -359,7 +359,7 @@ describe('errors module', () => {
         type: 'error',
         code: 'ERR_RATE_LIMITED',
         message: 'Rate limited',
-        details: { retryAfter: 60 }
+        details: { retryAfter: 60 },
       });
     });
 

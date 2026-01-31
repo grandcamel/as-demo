@@ -44,12 +44,7 @@ const path = require('path');
  * envFile.cleanup();
  */
 function createSessionEnvFile(options) {
-  const {
-    sessionId,
-    containerPath,
-    hostPath,
-    credentials
-  } = options;
+  const { sessionId, containerPath, hostPath, credentials } = options;
 
   if (!sessionId || typeof sessionId !== 'string') {
     throw new Error('sessionId must be a non-empty string');
@@ -70,10 +65,11 @@ function createSessionEnvFile(options) {
 
   // Build env file content
   // Filter out empty/undefined values
-  const envContent = Object.entries(credentials)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n') + '\n';
+  const envContent =
+    Object.entries(credentials)
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n') + '\n';
 
   // Ensure directory exists
   try {
@@ -105,7 +101,7 @@ function createSessionEnvFile(options) {
   return {
     containerPath: fullContainerPath,
     hostPath: fullHostPath,
-    cleanup
+    cleanup,
   };
 }
 
@@ -159,7 +155,7 @@ function createEnvFileManager(options) {
       sessionId,
       containerPath,
       hostPath,
-      credentials
+      credentials,
     });
 
     files.set(sessionId, envFile);
@@ -221,11 +217,11 @@ function createEnvFileManager(options) {
     cleanup,
     cleanupAll,
     get,
-    size
+    size,
   };
 }
 
 module.exports = {
   createSessionEnvFile,
-  createEnvFileManager
+  createEnvFileManager,
 };

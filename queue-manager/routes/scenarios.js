@@ -11,19 +11,23 @@ const config = require('../config');
 // Load HTML template at module load (cached)
 let scenarioTemplate;
 try {
-  scenarioTemplate = fs.readFileSync(path.join(__dirname, '..', 'templates', 'scenario.html'), 'utf8');
+  scenarioTemplate = fs.readFileSync(
+    path.join(__dirname, '..', 'templates', 'scenario.html'),
+    'utf8'
+  );
 } catch (err) {
   console.error('Failed to load scenario template:', err.message);
   scenarioTemplate = '<!DOCTYPE html><html><body>{{CONTENT}}</body></html>';
 }
 
 // HTML escape helper to prevent XSS
-const escapeHtml = (str) => str
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#039;');
+const escapeHtml = (str) =>
+  str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 /**
  * Register scenario routes.
@@ -59,12 +63,37 @@ function register(app) {
       // Convert markdown to HTML and sanitize to prevent XSS
       const rawHtml = marked(markdown);
       const htmlContent = DOMPurify.sanitize(rawHtml, {
-        ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
-                       'ul', 'ol', 'li', 'a', 'strong', 'em', 'code', 'pre',
-                       'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
-                       'img', 'span', 'div'],
+        ALLOWED_TAGS: [
+          'h1',
+          'h2',
+          'h3',
+          'h4',
+          'h5',
+          'h6',
+          'p',
+          'br',
+          'hr',
+          'ul',
+          'ol',
+          'li',
+          'a',
+          'strong',
+          'em',
+          'code',
+          'pre',
+          'blockquote',
+          'table',
+          'thead',
+          'tbody',
+          'tr',
+          'th',
+          'td',
+          'img',
+          'span',
+          'div',
+        ],
         ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel'],
-        ALLOW_DATA_ATTR: false
+        ALLOW_DATA_ATTR: false,
       });
 
       // Render template with substitutions (escape icon/title to prevent XSS)

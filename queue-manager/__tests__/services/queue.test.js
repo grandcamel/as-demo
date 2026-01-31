@@ -38,22 +38,24 @@ describe('queue service', () => {
       queue: queueArray,
       pendingSessionTokens,
       getActiveSession: vi.fn(() => mockActiveSession),
-      setActiveSession: vi.fn((session) => { mockActiveSession = session; }),
+      setActiveSession: vi.fn((session) => {
+        mockActiveSession = session;
+      }),
       tryAcquireReconnectionLock: vi.fn(() => true),
       setReconnectionInProgress: vi.fn(),
-      clearDisconnectGraceTimeout: vi.fn()
+      clearDisconnectGraceTimeout: vi.fn(),
     };
 
     // Mock invite service
     mockInviteService = {
-      validateInvite: vi.fn(() => ({ valid: true, data: { useCount: 0, maxUses: 1 } }))
+      validateInvite: vi.fn(() => ({ valid: true, data: { useCount: 0, maxUses: 1 } })),
     };
 
     // Mock session service
     mockSessionService = {
       generateSessionToken: vi.fn(() => 'mock-session-token-123'),
       startSession: vi.fn(),
-      findClientWs: vi.fn()
+      findClientWs: vi.fn(),
     };
 
     // Clear require cache
@@ -63,12 +65,18 @@ describe('queue service', () => {
       '../../services/invite',
       '../../services/session',
       '../../config',
-      '../../errors'
-    ].map(p => {
-      try { return require.resolve(p); } catch { return null; }
-    }).filter(Boolean);
+      '../../errors',
+    ]
+      .map((p) => {
+        try {
+          return require.resolve(p);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
-    paths.forEach(p => delete require.cache[p]);
+    paths.forEach((p) => delete require.cache[p]);
 
     // Mock config
     const configPath = require.resolve('../../config');
@@ -79,8 +87,8 @@ describe('queue service', () => {
       exports: {
         MAX_QUEUE_SIZE: 10,
         AVERAGE_SESSION_MINUTES: 45,
-        ENABLED_PLATFORMS: ['confluence', 'jira']
-      }
+        ENABLED_PLATFORMS: ['confluence', 'jira'],
+      },
     };
 
     // Mock state
@@ -89,7 +97,7 @@ describe('queue service', () => {
       id: statePath,
       filename: statePath,
       loaded: true,
-      exports: mockState
+      exports: mockState,
     };
 
     // Mock invite service
@@ -98,7 +106,7 @@ describe('queue service', () => {
       id: invitePath,
       filename: invitePath,
       loaded: true,
-      exports: mockInviteService
+      exports: mockInviteService,
     };
 
     // Mock session service
@@ -107,7 +115,7 @@ describe('queue service', () => {
       id: sessionPath,
       filename: sessionPath,
       loaded: true,
-      exports: mockSessionService
+      exports: mockSessionService,
     };
 
     // Mock errors module (required by queue.js)
@@ -125,10 +133,10 @@ describe('queue service', () => {
           INVITE_NOT_FOUND: 'ERR_INVITE_NOT_FOUND',
           INVITE_EXPIRED: 'ERR_INVITE_EXPIRED',
           INVITE_USED: 'ERR_INVITE_USED',
-          INVITE_REVOKED: 'ERR_INVITE_REVOKED'
+          INVITE_REVOKED: 'ERR_INVITE_REVOKED',
         },
-        formatWsError: vi.fn((code, message) => JSON.stringify({ type: 'error', code, message }))
-      }
+        formatWsError: vi.fn((code, message) => JSON.stringify({ type: 'error', code, message })),
+      },
     };
 
     // Now require the module
@@ -136,14 +144,14 @@ describe('queue service', () => {
 
     // Setup mock WebSocket
     mockWs = {
-      send: vi.fn()
+      send: vi.fn(),
     };
 
     // Setup mock Redis
     mockRedis = {
       get: vi.fn(),
       set: vi.fn(),
-      del: vi.fn()
+      del: vi.fn(),
     };
   });
 
@@ -156,14 +164,14 @@ describe('queue service', () => {
           inviteToken: 'invite-abc',
           ip: '192.168.1.1',
           awaitingReconnect: true,
-          expiresAt: new Date(Date.now() + 600000)
+          expiresAt: new Date(Date.now() + 600000),
         };
         mockState.getActiveSession.mockReturnValue(mockActiveSession);
 
         const client = {
           id: 'client-new',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -184,19 +192,21 @@ describe('queue service', () => {
           sessionId: 'session-123',
           inviteToken: 'invite-abc',
           ip: '192.168.1.1',
-          awaitingReconnect: true
+          awaitingReconnect: true,
         };
         mockState.getActiveSession.mockReturnValue(mockActiveSession);
         mockState.tryAcquireReconnectionLock.mockReturnValue(false);
 
         const client = {
           id: 'client-new',
-          ip: '192.168.1.1'
+          ip: '192.168.1.1',
         };
 
         await queue.joinQueue(mockRedis, mockWs, client, 'invite-abc', vi.fn());
 
-        expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('ERR_RECONNECTION_IN_PROGRESS'));
+        expect(mockWs.send).toHaveBeenCalledWith(
+          expect.stringContaining('ERR_RECONNECTION_IN_PROGRESS')
+        );
       });
 
       it('should not reconnect if IP does not match', async () => {
@@ -204,14 +214,14 @@ describe('queue service', () => {
           sessionId: 'session-123',
           inviteToken: 'invite-abc',
           ip: '10.0.0.1',
-          awaitingReconnect: true
+          awaitingReconnect: true,
         };
         mockState.getActiveSession.mockReturnValue(mockActiveSession);
 
         const client = {
           id: 'client-new',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -226,14 +236,14 @@ describe('queue service', () => {
           sessionId: 'session-123',
           inviteToken: 'invite-abc',
           ip: '192.168.1.1',
-          awaitingReconnect: false
+          awaitingReconnect: false,
         };
         mockState.getActiveSession.mockReturnValue(mockActiveSession);
 
         const client = {
           id: 'client-new',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -262,7 +272,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -280,14 +290,16 @@ describe('queue service', () => {
         mockInviteService.validateInvite.mockResolvedValue({
           valid: false,
           reason: 'invalid',
-          message: 'Malformed token'
+          message: 'Malformed token',
         });
 
         const client = { id: 'client-1', ip: '192.168.1.1' };
 
         await queue.joinQueue(mockRedis, mockWs, client, 'bad-token', vi.fn());
 
-        expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"invite_invalid"'));
+        expect(mockWs.send).toHaveBeenCalledWith(
+          expect.stringContaining('"type":"invite_invalid"')
+        );
         expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"reason":"invalid"'));
         expect(queueArray).toHaveLength(0);
       });
@@ -296,7 +308,7 @@ describe('queue service', () => {
         mockInviteService.validateInvite.mockResolvedValue({
           valid: false,
           reason: 'not_found',
-          message: 'Invite not found'
+          message: 'Invite not found',
         });
 
         const client = { id: 'client-1', ip: '192.168.1.1' };
@@ -310,7 +322,7 @@ describe('queue service', () => {
         mockInviteService.validateInvite.mockResolvedValue({
           valid: false,
           reason: 'expired',
-          message: 'Invite expired'
+          message: 'Invite expired',
         });
 
         const client = { id: 'client-1', ip: '192.168.1.1' };
@@ -324,7 +336,7 @@ describe('queue service', () => {
         mockInviteService.validateInvite.mockResolvedValue({
           valid: false,
           reason: 'used',
-          message: 'Invite already used'
+          message: 'Invite already used',
         });
 
         const client = { id: 'client-1', ip: '192.168.1.1' };
@@ -338,7 +350,7 @@ describe('queue service', () => {
         mockInviteService.validateInvite.mockResolvedValue({
           valid: false,
           reason: 'revoked',
-          message: 'Invite revoked'
+          message: 'Invite revoked',
         });
 
         const client = { id: 'client-1', ip: '192.168.1.1' };
@@ -352,7 +364,7 @@ describe('queue service', () => {
         mockInviteService.validateInvite.mockResolvedValue({
           valid: false,
           reason: 'unknown_reason',
-          message: 'Unknown error'
+          message: 'Unknown error',
         });
 
         const client = { id: 'client-1', ip: '192.168.1.1' };
@@ -366,7 +378,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -399,7 +411,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -415,7 +427,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -430,7 +442,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -445,7 +457,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -467,14 +479,16 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
         await queue.joinQueue(mockRedis, mockWs, client, null, vi.fn());
 
         expect(mockSessionService.startSession).not.toHaveBeenCalled();
-        expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"queue_position"'));
+        expect(mockWs.send).toHaveBeenCalledWith(
+          expect.stringContaining('"type":"queue_position"')
+        );
       });
 
       it('should send queue position if not first in queue', async () => {
@@ -483,7 +497,7 @@ describe('queue service', () => {
         const client = {
           id: 'client-1',
           ip: '192.168.1.1',
-          state: 'connected'
+          state: 'connected',
         };
         clients.set(mockWs, client);
 
@@ -643,9 +657,7 @@ describe('queue service', () => {
       queueArray.push('client-disconnected', 'client-2');
 
       // First call returns null (disconnected), second returns the ws
-      mockSessionService.findClientWs
-        .mockReturnValueOnce(null)
-        .mockReturnValueOnce(clientWs);
+      mockSessionService.findClientWs.mockReturnValueOnce(null).mockReturnValueOnce(clientWs);
 
       queue.processQueue(mockRedis);
 

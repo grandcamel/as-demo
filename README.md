@@ -16,12 +16,12 @@ One-click live demo combining [Confluence](https://github.com/grandcamel/conflue
 
 ## Cross-Platform Scenarios
 
-| Scenario | Flow | Description |
-|----------|------|-------------|
+| Scenario              | Flow                       | Description                                      |
+| --------------------- | -------------------------- | ------------------------------------------------ |
 | **Incident Response** | Splunk → Confluence → JIRA | Detect anomaly, document findings, create ticket |
-| **SRE On-Call** | Splunk → Confluence → JIRA | Alert triage, KB lookup, task creation |
-| **Change Management** | JIRA → Confluence → Splunk | Track change, update docs, verify deployment |
-| **Knowledge Sync** | JIRA → Confluence | Sync issue details to documentation |
+| **SRE On-Call**       | Splunk → Confluence → JIRA | Alert triage, KB lookup, task creation           |
+| **Change Management** | JIRA → Confluence → Splunk | Track change, update docs, verify deployment     |
+| **Knowledge Sync**    | JIRA → Confluence          | Sync issue details to documentation              |
 
 ## Architecture
 
@@ -75,11 +75,11 @@ make dev-full
 
 ## Deployment Modes
 
-| Mode | Command | Services | Memory |
-|------|---------|----------|--------|
-| Atlassian Only | `make dev` | nginx, queue-manager, redis, lgtm | 2GB |
-| Full (with Splunk) | `make dev-full` | + splunk, log-generator | 6GB+ |
-| Production | `make deploy` | SSL enabled | 4GB+ |
+| Mode               | Command         | Services                          | Memory |
+| ------------------ | --------------- | --------------------------------- | ------ |
+| Atlassian Only     | `make dev`      | nginx, queue-manager, redis, lgtm | 2GB    |
+| Full (with Splunk) | `make dev-full` | + splunk, log-generator           | 6GB+   |
+| Production         | `make deploy`   | SSL enabled                       | 4GB+   |
 
 ## Configuration
 
@@ -125,12 +125,12 @@ DOMAIN=demo.assistant-skills.dev
 
 The `refine-skill` command locates platform skills repositories using these environment variables:
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `SKILLS_BASE_PATH` | Base directory for all skills repos | Parent of as-demo directory |
-| `CONFLUENCE_SKILLS_PATH` | Confluence skills repo | `{base}/Confluence-Assistant-Skills` |
-| `JIRA_SKILLS_PATH` | JIRA skills repo | `{base}/Jira-Assistant-Skills` |
-| `SPLUNK_SKILLS_PATH` | Splunk skills repo | `{base}/Splunk-Assistant-Skills` |
+| Variable                 | Purpose                             | Default                              |
+| ------------------------ | ----------------------------------- | ------------------------------------ |
+| `SKILLS_BASE_PATH`       | Base directory for all skills repos | Parent of as-demo directory          |
+| `CONFLUENCE_SKILLS_PATH` | Confluence skills repo              | `{base}/Confluence-Assistant-Skills` |
+| `JIRA_SKILLS_PATH`       | JIRA skills repo                    | `{base}/Jira-Assistant-Skills`       |
+| `SPLUNK_SKILLS_PATH`     | Splunk skills repo                  | `{base}/Splunk-Assistant-Skills`     |
 
 ```bash
 # Override base path for all platforms
@@ -143,11 +143,13 @@ CONFLUENCE_SKILLS_PATH=/home/user/my-confluence make refine-skill PLATFORM=confl
 ### Claude Authentication
 
 **macOS Keychain** (recommended):
+
 ```bash
 security add-generic-password -a "$USER" -s "CLAUDE_CODE_OAUTH_TOKEN" -w "<token>"
 ```
 
 **Linux (secret-tool)**:
+
 ```bash
 secret-tool store --label="Claude Code OAuth" service CLAUDE_CODE_OAUTH_TOKEN username "$USER"
 ```
@@ -222,30 +224,30 @@ make list-scenarios       # List all available scenarios
 
 ### Confluence
 
-| Scenario | Description |
-|----------|-------------|
-| page | Page CRUD, content creation |
-| search | CQL queries, text search |
-| space | Space management |
-| hierarchy | Page tree navigation |
+| Scenario  | Description                 |
+| --------- | --------------------------- |
+| page      | Page CRUD, content creation |
+| search    | CQL queries, text search    |
+| space     | Space management            |
+| hierarchy | Page tree navigation        |
 
 ### JIRA
 
-| Scenario | Description |
-|----------|-------------|
-| issue | Issue CRUD, transitions |
-| search | JQL queries, filters |
-| agile | Sprints, boards, epics |
-| jsm | Service desk requests |
+| Scenario | Description             |
+| -------- | ----------------------- |
+| issue    | Issue CRUD, transitions |
+| search   | JQL queries, filters    |
+| agile    | Sprints, boards, epics  |
+| jsm      | Service desk requests   |
 
 ### Splunk
 
-| Scenario | Description |
-|----------|-------------|
-| search | SPL queries, saved searches |
-| sre | Error investigation, latency |
-| devops | CI/CD, deployments |
-| support | Customer sessions, tickets |
+| Scenario | Description                  |
+| -------- | ---------------------------- |
+| search   | SPL queries, saved searches  |
+| sre      | Error investigation, latency |
+| devops   | CI/CD, deployments           |
+| support  | Customer sessions, tickets   |
 
 ## Observability
 
@@ -253,24 +255,24 @@ Integrated LGTM stack accessible at `/grafana/` during active sessions.
 
 ### Grafana Dashboards
 
-| Dashboard | Purpose |
-|-----------|---------|
-| Demo Home | Queue status, active sessions |
-| Queue Operations | Queue metrics, wait times |
-| Session Analytics | Session duration, user behavior |
+| Dashboard          | Purpose                         |
+| ------------------ | ------------------------------- |
+| Demo Home          | Queue status, active sessions   |
+| Queue Operations   | Queue metrics, wait times       |
+| Session Analytics  | Session duration, user behavior |
 | Skill Test Results | Test pass/fail, quality ratings |
-| Nginx Access Logs | Request logs, traffic analysis |
-| System Overview | Container health, error rates |
+| Nginx Access Logs  | Request logs, traffic analysis  |
+| System Overview    | Container health, error rates   |
 
 ### Custom Metrics
 
-| Metric | Description |
-|--------|-------------|
-| `as_demo_queue_size` | Current queue length |
-| `as_demo_sessions_active` | Active session count |
-| `as_demo_sessions_started_total` | Total sessions started |
-| `as_demo_session_duration_seconds` | Session duration histogram |
-| `as_demo_invites_validated_total` | Invite validation by status |
+| Metric                             | Description                 |
+| ---------------------------------- | --------------------------- |
+| `as_demo_queue_size`               | Current queue length        |
+| `as_demo_sessions_active`          | Active session count        |
+| `as_demo_sessions_started_total`   | Total sessions started      |
+| `as_demo_session_duration_seconds` | Session duration histogram  |
+| `as_demo_invites_validated_total`  | Invite validation by status |
 
 ## Security
 
@@ -298,6 +300,7 @@ The health endpoint shows `enabled_platforms` vs `configured_platforms`. If a pl
 ### Splunk resource issues
 
 Splunk requires 4GB+ memory. Run Atlassian-only mode if resources are limited:
+
 ```bash
 make dev  # Without --profile full
 ```
@@ -312,12 +315,12 @@ rm -rf ~/.claude/plugins
 
 ## Cost
 
-| Item | Monthly |
-|------|---------|
-| DigitalOcean Droplet (8GB) | $48 |
-| Reserved IP | $4 |
-| Domain | ~$1 |
-| **Total** | **~$53** |
+| Item                       | Monthly  |
+| -------------------------- | -------- |
+| DigitalOcean Droplet (8GB) | $48      |
+| Reserved IP                | $4       |
+| Domain                     | ~$1      |
+| **Total**                  | **~$53** |
 
 ## License
 
@@ -325,12 +328,12 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-| Project | Purpose |
-|---------|---------|
+| Project                                                                                  | Purpose                       |
+| ---------------------------------------------------------------------------------------- | ----------------------------- |
 | [Confluence Assistant Skills](https://github.com/grandcamel/confluence-assistant-skills) | Confluence Claude Code plugin |
-| [JIRA Assistant Skills](https://github.com/grandcamel/jira-assistant-skills) | JIRA Claude Code plugin |
-| [Splunk Assistant Skills](https://github.com/grandcamel/splunk-assistant-skills) | Splunk Claude Code plugin |
-| [confluence-demo](https://github.com/grandcamel/confluence-demo) | Standalone Confluence demo |
-| [jira-demo](https://github.com/grandcamel/jira-demo) | Standalone JIRA demo |
-| [splunk-demo](https://github.com/grandcamel/splunk-demo) | Standalone Splunk demo |
-| [claude-devcontainer](https://github.com/grandcamel/claude-devcontainer) | Base container image |
+| [JIRA Assistant Skills](https://github.com/grandcamel/jira-assistant-skills)             | JIRA Claude Code plugin       |
+| [Splunk Assistant Skills](https://github.com/grandcamel/splunk-assistant-skills)         | Splunk Claude Code plugin     |
+| [confluence-demo](https://github.com/grandcamel/confluence-demo)                         | Standalone Confluence demo    |
+| [jira-demo](https://github.com/grandcamel/jira-demo)                                     | Standalone JIRA demo          |
+| [splunk-demo](https://github.com/grandcamel/splunk-demo)                                 | Standalone Splunk demo        |
+| [claude-devcontainer](https://github.com/grandcamel/claude-devcontainer)                 | Base container image          |

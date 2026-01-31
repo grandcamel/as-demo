@@ -10,16 +10,12 @@ const config = require('../config');
 const state = require('../services/state');
 const { joinQueue, leaveQueue, broadcastQueueUpdate, processQueue } = require('../services/queue');
 const { endSession } = require('../services/session');
-const {
-  ErrorCodes,
-  formatWsError,
-  formatWsCloseReason,
-} = require('../errors');
+const { ErrorCodes, formatWsError, formatWsCloseReason } = require('../errors');
 
 // Rate limiter instance using shared library
 const connectionRateLimiter = createConnectionRateLimiter({
   windowMs: config.RATE_LIMIT_WINDOW_MS,
-  maxConnections: config.RATE_LIMIT_MAX_CONNECTIONS
+  maxConnections: config.RATE_LIMIT_MAX_CONNECTIONS,
 });
 
 /**
@@ -45,7 +41,8 @@ function cleanupRateLimits() {
  */
 function setup(wss, redis) {
   wss.on('connection', (ws, req) => {
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
+    const clientIp =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'] || 'unknown';
 
     // Check rate limit before accepting connection
@@ -69,19 +66,13 @@ function setup(wss, redis) {
       // Allow missing origin only in development (e.g., curl, Postman testing)
       if (process.env.NODE_ENV === 'production') {
         console.log('WebSocket connection rejected: missing origin header');
-        ws.close(
-          1008,
-          formatWsCloseReason(ErrorCodes.ORIGIN_REQUIRED, 'Origin header required')
-        );
+        ws.close(1008, formatWsCloseReason(ErrorCodes.ORIGIN_REQUIRED, 'Origin header required'));
         return;
       }
       console.log('Warning: WebSocket connection without origin header (allowed in dev mode)');
     } else if (!config.ALLOWED_ORIGINS.includes(origin)) {
       console.log(`WebSocket connection rejected: invalid origin ${origin}`);
-      ws.close(
-        1008,
-        formatWsCloseReason(ErrorCodes.ORIGIN_NOT_ALLOWED, 'Origin not allowed')
-      );
+      ws.close(1008, formatWsCloseReason(ErrorCodes.ORIGIN_NOT_ALLOWED, 'Origin not allowed'));
       return;
     }
 
@@ -93,7 +84,7 @@ function setup(wss, redis) {
       joinedAt: null,
       ip: clientIp,
       userAgent: userAgent,
-      inviteToken: null
+      inviteToken: null,
     });
 
     console.log(`Client connected: ${clientId} from ${clientIp}`);
@@ -101,14 +92,11 @@ function setup(wss, redis) {
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data);
-        console.log("Received message:", message);
+        console.log('Received message:', message);
         await handleMessage(redis, ws, message);
       } catch (err) {
         console.error('Error handling message:', err.message);
-        ws.send(formatWsError(
-          ErrorCodes.INVALID_MESSAGE_FORMAT,
-          'Invalid message format'
-        ));
+        ws.send(formatWsError(ErrorCodes.INVALID_MESSAGE_FORMAT, 'Invalid message format'));
       }
     });
 
@@ -145,10 +133,9 @@ async function handleMessage(redis, ws, message) {
       break;
 
     default:
-      ws.send(formatWsError(
-        ErrorCodes.UNKNOWN_MESSAGE_TYPE,
-        `Unknown message type: ${message.type}`
-      ));
+      ws.send(
+        formatWsError(ErrorCodes.UNKNOWN_MESSAGE_TYPE, `Unknown message type: ${message.type}`)
+      );
   }
 }
 
@@ -174,7 +161,9 @@ function handleDisconnect(redis, ws) {
 
   // End session with grace period if active (allows page refresh)
   if (activeSession && activeSession.clientId === client.id) {
-    console.log(`Starting ${config.DISCONNECT_GRACE_MS/1000}s grace period for session ${activeSession.sessionId}`);
+    console.log(
+      `Starting ${config.DISCONNECT_GRACE_MS / 1000}s grace period for session ${activeSession.sessionId}`
+    );
 
     // Store info needed for reconnection
     activeSession.disconnectedAt = new Date();
@@ -200,13 +189,15 @@ function handleDisconnect(redis, ws) {
 }
 
 function sendStatus(ws) {
-  ws.send(JSON.stringify({
-    type: 'status',
-    queue_size: state.queue.length,
-    session_active: state.getActiveSession() !== null,
-    enabled_platforms: config.ENABLED_PLATFORMS,
-    configured_platforms: config.getConfiguredPlatforms()
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'status',
+      queue_size: state.queue.length,
+      session_active: state.getActiveSession() !== null,
+      enabled_platforms: config.ENABLED_PLATFORMS,
+      configured_platforms: config.getConfiguredPlatforms(),
+    })
+  );
 }
 
 module.exports = { setup, cleanupRateLimits };

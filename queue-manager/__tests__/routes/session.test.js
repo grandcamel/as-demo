@@ -42,12 +42,18 @@ describe('session routes', () => {
       '../../services/state',
       '../../services/invite',
       '../../config',
-      '../../errors'
-    ].map(p => {
-      try { return require.resolve(p); } catch { return null; }
-    }).filter(Boolean);
+      '../../errors',
+    ]
+      .map((p) => {
+        try {
+          return require.resolve(p);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
-    paths.forEach(p => delete require.cache[p]);
+    paths.forEach((p) => delete require.cache[p]);
 
     // Mock config
     const configPath = require.resolve('../../config');
@@ -57,8 +63,8 @@ describe('session routes', () => {
       loaded: true,
       exports: {
         SESSION_TIMEOUT_MINUTES: 60,
-        COOKIE_SECURE: false
-      }
+        COOKIE_SECURE: false,
+      },
     };
 
     // Mock state
@@ -70,8 +76,8 @@ describe('session routes', () => {
       exports: {
         sessionTokens,
         pendingSessionTokens,
-        getActiveSession: mockGetActiveSession
-      }
+        getActiveSession: mockGetActiveSession,
+      },
     };
 
     // Mock invite service
@@ -83,8 +89,8 @@ describe('session routes', () => {
       exports: {
         checkInviteRateLimit: mockCheckInviteRateLimit,
         recordFailedInviteAttempt: mockRecordFailedInviteAttempt,
-        validateInvite: mockValidateInvite
-      }
+        validateInvite: mockValidateInvite,
+      },
     };
 
     // Import modules
@@ -100,13 +106,13 @@ describe('session routes', () => {
       }),
       post: vi.fn((path, handler) => {
         registeredRoutes[`POST ${path}`] = handler;
-      })
+      }),
     };
 
     mockRedis = {
       get: vi.fn(),
       set: vi.fn(),
-      del: vi.fn()
+      del: vi.fn(),
     };
 
     session.register(mockApp, mockRedis);
@@ -138,13 +144,13 @@ describe('session routes', () => {
     beforeEach(() => {
       handler = registeredRoutes['GET /api/session/validate'];
       mockReq = {
-        cookies: {}
+        cookies: {},
       };
       mockRes = {
         status: vi.fn().mockReturnThis(),
         send: vi.fn(),
         json: vi.fn(),
-        set: vi.fn()
+        set: vi.fn(),
       };
     });
 
@@ -154,7 +160,7 @@ describe('session routes', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_NO_SESSION_COOKIE',
-        message: 'No session cookie'
+        message: 'No session cookie',
       });
     });
 
@@ -189,7 +195,7 @@ describe('session routes', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_SESSION_NOT_ACTIVE',
-        message: 'Session not active'
+        message: 'Session not active',
       });
     });
 
@@ -212,12 +218,12 @@ describe('session routes', () => {
     beforeEach(() => {
       handler = registeredRoutes['POST /api/session/cookie'];
       mockReq = {
-        body: {}
+        body: {},
       };
       mockRes = {
         status: vi.fn().mockReturnThis(),
         json: vi.fn(),
-        cookie: vi.fn()
+        cookie: vi.fn(),
       };
     });
 
@@ -228,7 +234,7 @@ describe('session routes', () => {
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_INVALID_INPUT',
         message: 'Token required',
-        details: { field: 'token' }
+        details: { field: 'token' },
       });
     });
 
@@ -241,7 +247,7 @@ describe('session routes', () => {
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_INVALID_INPUT',
         message: 'Token required',
-        details: { field: 'token' }
+        details: { field: 'token' },
       });
     });
 
@@ -253,7 +259,7 @@ describe('session routes', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
         code: 'ERR_INVALID_TOKEN',
-        message: 'Invalid token'
+        message: 'Invalid token',
       });
     });
 
@@ -268,7 +274,7 @@ describe('session routes', () => {
         secure: false,
         sameSite: 'strict',
         maxAge: 60 * 60 * 1000, // 60 minutes
-        path: '/'
+        path: '/',
       });
       expect(mockRes.json).toHaveBeenCalledWith({ success: true });
     });
@@ -279,7 +285,11 @@ describe('session routes', () => {
 
       handler(mockReq, mockRes);
 
-      expect(mockRes.cookie).toHaveBeenCalledWith('demo_session', 'pending-token', expect.any(Object));
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'demo_session',
+        'pending-token',
+        expect.any(Object)
+      );
       expect(mockRes.json).toHaveBeenCalledWith({ success: true });
     });
   });
@@ -294,7 +304,7 @@ describe('session routes', () => {
       mockReq = {};
       mockRes = {
         json: vi.fn(),
-        clearCookie: vi.fn()
+        clearCookie: vi.fn(),
       };
     });
 
@@ -305,7 +315,7 @@ describe('session routes', () => {
         httpOnly: true,
         secure: false,
         sameSite: 'strict',
-        path: '/'
+        path: '/',
       });
       expect(mockRes.json).toHaveBeenCalledWith({ success: true });
     });
@@ -321,11 +331,11 @@ describe('session routes', () => {
       mockReq = {
         headers: {},
         query: {},
-        socket: { remoteAddress: '127.0.0.1' }
+        socket: { remoteAddress: '127.0.0.1' },
       };
       mockRes = {
         status: vi.fn().mockReturnThis(),
-        json: vi.fn()
+        json: vi.fn(),
       };
     });
 
@@ -339,7 +349,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_RATE_LIMITED_INVITE',
         message: expect.stringContaining('Too many attempts'),
-        details: { retryAfter: 3600, reason: 'rate_limited' }
+        details: { retryAfter: 3600, reason: 'rate_limited' },
       });
     });
 
@@ -351,7 +361,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_MISSING',
         message: 'Invite token required',
-        details: { reason: 'missing' }
+        details: { reason: 'missing' },
       });
       expect(invite.recordFailedInviteAttempt).toHaveBeenCalled();
     });
@@ -399,7 +409,7 @@ describe('session routes', () => {
       invite.validateInvite.mockResolvedValue({
         valid: false,
         reason: 'expired',
-        message: 'Invite has expired'
+        message: 'Invite has expired',
       });
 
       await handler(mockReq, mockRes);
@@ -409,7 +419,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_EXPIRED',
         message: 'Invite has expired',
-        details: { reason: 'expired' }
+        details: { reason: 'expired' },
       });
       expect(invite.recordFailedInviteAttempt).toHaveBeenCalled();
     });
@@ -419,7 +429,7 @@ describe('session routes', () => {
       invite.validateInvite.mockResolvedValue({
         valid: false,
         reason: 'used',
-        message: 'Invite already used'
+        message: 'Invite already used',
       });
 
       await handler(mockReq, mockRes);
@@ -429,7 +439,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_USED',
         message: 'Invite already used',
-        details: { reason: 'used' }
+        details: { reason: 'used' },
       });
     });
 
@@ -438,7 +448,7 @@ describe('session routes', () => {
       invite.validateInvite.mockResolvedValue({
         valid: false,
         reason: 'revoked',
-        message: 'Invite has been revoked'
+        message: 'Invite has been revoked',
       });
 
       await handler(mockReq, mockRes);
@@ -447,7 +457,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_REVOKED',
         message: 'Invite has been revoked',
-        details: { reason: 'revoked' }
+        details: { reason: 'revoked' },
       });
     });
 
@@ -456,7 +466,7 @@ describe('session routes', () => {
       invite.validateInvite.mockResolvedValue({
         valid: false,
         reason: 'not_found',
-        message: 'Invite not found'
+        message: 'Invite not found',
       });
 
       await handler(mockReq, mockRes);
@@ -465,7 +475,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_NOT_FOUND',
         message: 'Invite not found',
-        details: { reason: 'not_found' }
+        details: { reason: 'not_found' },
       });
     });
 
@@ -474,7 +484,7 @@ describe('session routes', () => {
       invite.validateInvite.mockResolvedValue({
         valid: false,
         reason: 'invalid',
-        message: 'Invalid invite format'
+        message: 'Invalid invite format',
       });
 
       await handler(mockReq, mockRes);
@@ -483,7 +493,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_INVALID',
         message: 'Invalid invite format',
-        details: { reason: 'invalid' }
+        details: { reason: 'invalid' },
       });
     });
 
@@ -492,7 +502,7 @@ describe('session routes', () => {
       invite.validateInvite.mockResolvedValue({
         valid: false,
         reason: 'some_unknown_reason',
-        message: 'Unknown error occurred'
+        message: 'Unknown error occurred',
       });
 
       await handler(mockReq, mockRes);
@@ -501,7 +511,7 @@ describe('session routes', () => {
         valid: false,
         code: 'ERR_INVITE_INVALID',
         message: 'Unknown error occurred',
-        details: { reason: 'some_unknown_reason' }
+        details: { reason: 'some_unknown_reason' },
       });
     });
 

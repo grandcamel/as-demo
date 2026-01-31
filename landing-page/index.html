@@ -1,247 +1,247 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AS-Demo | Combined Assistant Skills Demo</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>AS-Demo</h1>
-      <p class="subtitle">Combined Assistant Skills Demo Platform</p>
-      <p class="description">Experience AI-powered automation across Confluence, JIRA, and Splunk</p>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AS-Demo | Combined Assistant Skills Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>AS-Demo</h1>
+        <p class="subtitle">Combined Assistant Skills Demo Platform</p>
+        <p class="description">
+          Experience AI-powered automation across Confluence, JIRA, and Splunk
+        </p>
+      </header>
 
-    <main>
-      <section class="status-section">
-        <div class="status-card">
-          <h3>Queue Status</h3>
-          <div id="queue-status">
-            <p>Connecting...</p>
+      <main>
+        <section class="status-section">
+          <div class="status-card">
+            <h3>Queue Status</h3>
+            <div id="queue-status">
+              <p>Connecting...</p>
+            </div>
           </div>
-        </div>
-        <div class="status-card">
-          <h3>Enabled Platforms</h3>
-          <div id="platforms-status">
-            <p>Loading...</p>
+          <div class="status-card">
+            <h3>Enabled Platforms</h3>
+            <div id="platforms-status">
+              <p>Loading...</p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="scenarios-section">
-        <h2>Demo Scenarios</h2>
+        <section class="scenarios-section">
+          <h2>Demo Scenarios</h2>
 
-        <div class="platform-group">
-          <h3 class="platform-header cross-platform">Cross-Platform Workflows</h3>
-          <div class="scenario-grid" id="cross-platform-scenarios">
-            <a href="/scenarios/incident-response" class="scenario-card">
-              <span class="icon">🚨</span>
-              <span class="title">Incident Response</span>
-              <span class="desc">Splunk alerts → Confluence runbook → JIRA ticket</span>
-            </a>
-            <a href="/scenarios/sre-oncall" class="scenario-card">
-              <span class="icon">📟</span>
-              <span class="title">SRE On-Call</span>
-              <span class="desc">Alert triage with KB and task creation</span>
-            </a>
-            <a href="/scenarios/change-management" class="scenario-card">
-              <span class="icon">📋</span>
-              <span class="title">Change Management</span>
-              <span class="desc">JIRA change → Confluence docs → Splunk monitoring</span>
-            </a>
-            <a href="/scenarios/knowledge-sync" class="scenario-card">
-              <span class="icon">📚</span>
-              <span class="title">Knowledge Sync</span>
-              <span class="desc">JIRA issues → Confluence release notes</span>
-            </a>
+          <div class="platform-group">
+            <h3 class="platform-header cross-platform">Cross-Platform Workflows</h3>
+            <div class="scenario-grid" id="cross-platform-scenarios">
+              <a href="/scenarios/incident-response" class="scenario-card">
+                <span class="icon">🚨</span>
+                <span class="title">Incident Response</span>
+                <span class="desc">Splunk alerts → Confluence runbook → JIRA ticket</span>
+              </a>
+              <a href="/scenarios/sre-oncall" class="scenario-card">
+                <span class="icon">📟</span>
+                <span class="title">SRE On-Call</span>
+                <span class="desc">Alert triage with KB and task creation</span>
+              </a>
+              <a href="/scenarios/change-management" class="scenario-card">
+                <span class="icon">📋</span>
+                <span class="title">Change Management</span>
+                <span class="desc">JIRA change → Confluence docs → Splunk monitoring</span>
+              </a>
+              <a href="/scenarios/knowledge-sync" class="scenario-card">
+                <span class="icon">📚</span>
+                <span class="title">Knowledge Sync</span>
+                <span class="desc">JIRA issues → Confluence release notes</span>
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div class="platform-group">
-          <h3 class="platform-header confluence">Confluence</h3>
-          <div class="scenario-grid" id="confluence-scenarios">
-            <a href="/scenarios/page" class="scenario-card">
-              <span class="icon">📝</span>
-              <span class="title">Page Management</span>
-              <span class="desc">Create, read, update, delete pages</span>
-            </a>
-            <a href="/scenarios/search" class="scenario-card">
-              <span class="icon">🔍</span>
-              <span class="title">CQL Search</span>
-              <span class="desc">Find content with queries</span>
-            </a>
-            <a href="/scenarios/space" class="scenario-card">
-              <span class="icon">🏠</span>
-              <span class="title">Space Management</span>
-              <span class="desc">Create and manage spaces</span>
-            </a>
-            <a href="/scenarios/hierarchy" class="scenario-card">
-              <span class="icon">🌳</span>
-              <span class="title">Page Hierarchy</span>
-              <span class="desc">Navigate page trees</span>
-            </a>
+          <div class="platform-group">
+            <h3 class="platform-header confluence">Confluence</h3>
+            <div class="scenario-grid" id="confluence-scenarios">
+              <a href="/scenarios/page" class="scenario-card">
+                <span class="icon">📝</span>
+                <span class="title">Page Management</span>
+                <span class="desc">Create, read, update, delete pages</span>
+              </a>
+              <a href="/scenarios/search" class="scenario-card">
+                <span class="icon">🔍</span>
+                <span class="title">CQL Search</span>
+                <span class="desc">Find content with queries</span>
+              </a>
+              <a href="/scenarios/space" class="scenario-card">
+                <span class="icon">🏠</span>
+                <span class="title">Space Management</span>
+                <span class="desc">Create and manage spaces</span>
+              </a>
+              <a href="/scenarios/hierarchy" class="scenario-card">
+                <span class="icon">🌳</span>
+                <span class="title">Page Hierarchy</span>
+                <span class="desc">Navigate page trees</span>
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div class="platform-group">
-          <h3 class="platform-header jira">JIRA</h3>
-          <div class="scenario-grid" id="jira-scenarios">
-            <a href="/scenarios/issue" class="scenario-card">
-              <span class="icon">📋</span>
-              <span class="title">Issue Management</span>
-              <span class="desc">Create, update, transition issues</span>
-            </a>
-            <a href="/scenarios/jira-search" class="scenario-card">
-              <span class="icon">🔍</span>
-              <span class="title">JQL Search</span>
-              <span class="desc">Find issues with queries</span>
-            </a>
-            <a href="/scenarios/agile" class="scenario-card">
-              <span class="icon">🏃</span>
-              <span class="title">Agile & Sprints</span>
-              <span class="desc">Sprint management, backlog</span>
-            </a>
-            <a href="/scenarios/jsm" class="scenario-card">
-              <span class="icon">🎫</span>
-              <span class="title">Service Desk</span>
-              <span class="desc">JSM workflows</span>
-            </a>
+          <div class="platform-group">
+            <h3 class="platform-header jira">JIRA</h3>
+            <div class="scenario-grid" id="jira-scenarios">
+              <a href="/scenarios/issue" class="scenario-card">
+                <span class="icon">📋</span>
+                <span class="title">Issue Management</span>
+                <span class="desc">Create, update, transition issues</span>
+              </a>
+              <a href="/scenarios/jira-search" class="scenario-card">
+                <span class="icon">🔍</span>
+                <span class="title">JQL Search</span>
+                <span class="desc">Find issues with queries</span>
+              </a>
+              <a href="/scenarios/agile" class="scenario-card">
+                <span class="icon">🏃</span>
+                <span class="title">Agile & Sprints</span>
+                <span class="desc">Sprint management, backlog</span>
+              </a>
+              <a href="/scenarios/jsm" class="scenario-card">
+                <span class="icon">🎫</span>
+                <span class="title">Service Desk</span>
+                <span class="desc">JSM workflows</span>
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div class="platform-group">
-          <h3 class="platform-header splunk">Splunk</h3>
-          <div class="scenario-grid" id="splunk-scenarios">
-            <a href="/scenarios/devops" class="scenario-card">
-              <span class="icon">🔧</span>
-              <span class="title">DevOps Engineer</span>
-              <span class="desc">Deployment monitoring, CI/CD</span>
-            </a>
-            <a href="/scenarios/sre" class="scenario-card">
-              <span class="icon">🚨</span>
-              <span class="title">SRE / On-Call</span>
-              <span class="desc">Alert management, incidents</span>
-            </a>
-            <a href="/scenarios/support" class="scenario-card">
-              <span class="icon">🎧</span>
-              <span class="title">Support Engineer</span>
-              <span class="desc">Log analysis, troubleshooting</span>
-            </a>
-            <a href="/scenarios/splunk-search" class="scenario-card">
-              <span class="icon">🔍</span>
-              <span class="title">Search Basics</span>
-              <span class="desc">SPL queries and visualizations</span>
-            </a>
+          <div class="platform-group">
+            <h3 class="platform-header splunk">Splunk</h3>
+            <div class="scenario-grid" id="splunk-scenarios">
+              <a href="/scenarios/devops" class="scenario-card">
+                <span class="icon">🔧</span>
+                <span class="title">DevOps Engineer</span>
+                <span class="desc">Deployment monitoring, CI/CD</span>
+              </a>
+              <a href="/scenarios/sre" class="scenario-card">
+                <span class="icon">🚨</span>
+                <span class="title">SRE / On-Call</span>
+                <span class="desc">Alert management, incidents</span>
+              </a>
+              <a href="/scenarios/support" class="scenario-card">
+                <span class="icon">🎧</span>
+                <span class="title">Support Engineer</span>
+                <span class="desc">Log analysis, troubleshooting</span>
+              </a>
+              <a href="/scenarios/splunk-search" class="scenario-card">
+                <span class="icon">🔍</span>
+                <span class="title">Search Basics</span>
+                <span class="desc">SPL queries and visualizations</span>
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="cta-section">
-        <button id="join-queue-btn" class="cta-button" disabled>
-          Loading...
-        </button>
-        <p class="cta-note">Demo sessions are 1 hour. One user at a time.</p>
-      </section>
-    </main>
+        <section class="cta-section">
+          <button id="join-queue-btn" class="cta-button" disabled>Loading...</button>
+          <p class="cta-note">Demo sessions are 1 hour. One user at a time.</p>
+        </section>
+      </main>
 
-    <footer>
-      <p>Built with Claude Code | <a href="https://github.com/grandcamel/as-demo">GitHub</a></p>
-    </footer>
-  </div>
+      <footer>
+        <p>Built with Claude Code | <a href="https://github.com/grandcamel/as-demo">GitHub</a></p>
+      </footer>
+    </div>
 
-  <script>
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let ws = null;
+    <script>
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      let ws = null;
 
-    // HTML escape to prevent XSS when inserting server data into DOM
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = String(str);
-      return div.innerHTML;
-    }
+      // HTML escape to prevent XSS when inserting server data into DOM
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
+      }
 
-    function connect() {
-      ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws`);
+      function connect() {
+        ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws`);
 
-      ws.onopen = () => {
-        console.log('Connected to queue manager');
-      };
+        ws.onopen = () => {
+          console.log('Connected to queue manager');
+        };
 
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        handleMessage(msg);
-      };
+        ws.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          handleMessage(msg);
+        };
 
-      ws.onclose = () => {
-        console.log('Disconnected, reconnecting...');
-        setTimeout(connect, 3000);
-      };
+        ws.onclose = () => {
+          console.log('Disconnected, reconnecting...');
+          setTimeout(connect, 3000);
+        };
 
-      ws.onerror = (err) => {
-        console.error('WebSocket error:', err);
-      };
-    }
+        ws.onerror = (err) => {
+          console.error('WebSocket error:', err);
+        };
+      }
 
-    function handleMessage(msg) {
-      const queueStatus = document.getElementById('queue-status');
-      const platformsStatus = document.getElementById('platforms-status');
-      const joinBtn = document.getElementById('join-queue-btn');
+      function handleMessage(msg) {
+        const queueStatus = document.getElementById('queue-status');
+        const platformsStatus = document.getElementById('platforms-status');
+        const joinBtn = document.getElementById('join-queue-btn');
 
-      switch (msg.type) {
-        case 'status':
-          queueStatus.innerHTML = `
+        switch (msg.type) {
+          case 'status':
+            queueStatus.innerHTML = `
             <p>Queue: <strong>${escapeHtml(msg.queue_size)}</strong> waiting</p>
             <p>Session: <strong>${msg.session_active ? 'Active' : 'Available'}</strong></p>
           `;
-          if (msg.configured_platforms) {
-            platformsStatus.innerHTML = msg.configured_platforms
-              .map(p => `<span class="platform-badge ${escapeHtml(p)}">${escapeHtml(p)}</span>`)
-              .join(' ');
-          }
-          joinBtn.disabled = false;
-          joinBtn.textContent = msg.session_active ? 'Join Queue' : 'Start Demo';
-          break;
+            if (msg.configured_platforms) {
+              platformsStatus.innerHTML = msg.configured_platforms
+                .map((p) => `<span class="platform-badge ${escapeHtml(p)}">${escapeHtml(p)}</span>`)
+                .join(' ');
+            }
+            joinBtn.disabled = false;
+            joinBtn.textContent = msg.session_active ? 'Join Queue' : 'Start Demo';
+            break;
 
-        case 'queue_position':
-          queueStatus.innerHTML = `
+          case 'queue_position':
+            queueStatus.innerHTML = `
             <p>Your position: <strong>#${escapeHtml(msg.position)}</strong></p>
             <p>Estimated wait: <strong>${escapeHtml(msg.estimated_wait)}</strong></p>
           `;
-          joinBtn.textContent = 'Leave Queue';
-          joinBtn.disabled = false;
-          break;
+            joinBtn.textContent = 'Leave Queue';
+            joinBtn.disabled = false;
+            break;
 
-        case 'session_starting':
-          window.location.href = msg.terminal_url;
-          break;
+          case 'session_starting':
+            window.location.href = msg.terminal_url;
+            break;
 
-        case 'session_token':
-          // Store session token cookie
-          fetch('/api/session/cookie', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: msg.session_token })
-          });
-          break;
+          case 'session_token':
+            // Store session token cookie
+            fetch('/api/session/cookie', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: msg.session_token }),
+            });
+            break;
 
-        case 'error':
-          alert(msg.message);
-          break;
+          case 'error':
+            alert(msg.message);
+            break;
+        }
       }
-    }
 
-    document.getElementById('join-queue-btn').addEventListener('click', () => {
-      const btn = document.getElementById('join-queue-btn');
-      if (btn.textContent === 'Leave Queue') {
-        ws.send(JSON.stringify({ type: 'leave_queue' }));
-      } else {
-        ws.send(JSON.stringify({ type: 'join_queue' }));
-      }
-    });
+      document.getElementById('join-queue-btn').addEventListener('click', () => {
+        const btn = document.getElementById('join-queue-btn');
+        if (btn.textContent === 'Leave Queue') {
+          ws.send(JSON.stringify({ type: 'leave_queue' }));
+        } else {
+          ws.send(JSON.stringify({ type: 'join_queue' }));
+        }
+      });
 
-    connect();
-  </script>
-</body>
+      connect();
+    </script>
+  </body>
 </html>

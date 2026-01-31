@@ -33,9 +33,7 @@ function generateSessionToken(sessionId, secret) {
 
   const timestamp = Date.now().toString();
   const data = `${sessionId}:${timestamp}`;
-  const signature = crypto.createHmac('sha256', secret)
-    .update(data)
-    .digest('hex');
+  const signature = crypto.createHmac('sha256', secret).update(data).digest('hex');
 
   return `${Buffer.from(data).toString('base64')}.${signature}`;
 }
@@ -80,15 +78,15 @@ function validateSessionToken(token, secret) {
   }
 
   // Verify signature using timing-safe comparison
-  const expectedSignature = crypto.createHmac('sha256', secret)
-    .update(data)
-    .digest('hex');
+  const expectedSignature = crypto.createHmac('sha256', secret).update(data).digest('hex');
 
   const signatureBuffer = Buffer.from(signature, 'hex');
   const expectedBuffer = Buffer.from(expectedSignature, 'hex');
 
-  if (signatureBuffer.length !== expectedBuffer.length ||
-      !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+  if (
+    signatureBuffer.length !== expectedBuffer.length ||
+    !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+  ) {
     return { valid: false, error: 'Invalid signature' };
   }
 
@@ -109,7 +107,7 @@ function validateSessionToken(token, secret) {
     valid: true,
     sessionId,
     timestamp,
-    error: null
+    error: null,
   };
 }
 
@@ -136,12 +134,12 @@ function isSessionTokenExpired(token, secret, maxAgeMs) {
   return {
     expired: ageMs > maxAgeMs,
     ageMs,
-    error: null
+    error: null,
   };
 }
 
 module.exports = {
   generateSessionToken,
   validateSessionToken,
-  isSessionTokenExpired
+  isSessionTokenExpired,
 };

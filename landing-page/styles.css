@@ -3,11 +3,11 @@
 :root {
   --deep-navy: #1a1a2e;
   --dark-blue: #16213e;
-  --atlassian-blue: #0052CC;
-  --jira-purple: #6554C0;
-  --splunk-green: #65A637;
-  --cross-platform-gold: #FFAB00;
-  --cyan: #00C7E6;
+  --atlassian-blue: #0052cc;
+  --jira-purple: #6554c0;
+  --splunk-green: #65a637;
+  --cross-platform-gold: #ffab00;
+  --cyan: #00c7e6;
   --light-gray: #e2e8f0;
   --muted-gray: #94a3b8;
   --white: #ffffff;
@@ -20,7 +20,13 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   background: linear-gradient(135deg, var(--deep-navy) 0%, var(--dark-blue) 100%);
   color: var(--light-gray);
   min-height: 100vh;

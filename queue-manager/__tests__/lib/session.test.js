@@ -7,7 +7,7 @@
 const {
   generateSessionToken,
   validateSessionToken,
-  isSessionTokenExpired
+  isSessionTokenExpired,
 } = require('../../lib/session');
 
 describe('session', () => {
@@ -51,43 +51,51 @@ describe('session', () => {
     });
 
     it('should throw error for empty sessionId', () => {
-      expect(() => generateSessionToken('', validSecret))
-        .toThrow('sessionId must be a non-empty string');
+      expect(() => generateSessionToken('', validSecret)).toThrow(
+        'sessionId must be a non-empty string'
+      );
     });
 
     it('should throw error for null sessionId', () => {
-      expect(() => generateSessionToken(null, validSecret))
-        .toThrow('sessionId must be a non-empty string');
+      expect(() => generateSessionToken(null, validSecret)).toThrow(
+        'sessionId must be a non-empty string'
+      );
     });
 
     it('should throw error for undefined sessionId', () => {
-      expect(() => generateSessionToken(undefined, validSecret))
-        .toThrow('sessionId must be a non-empty string');
+      expect(() => generateSessionToken(undefined, validSecret)).toThrow(
+        'sessionId must be a non-empty string'
+      );
     });
 
     it('should throw error for non-string sessionId', () => {
-      expect(() => generateSessionToken(12345, validSecret))
-        .toThrow('sessionId must be a non-empty string');
+      expect(() => generateSessionToken(12345, validSecret)).toThrow(
+        'sessionId must be a non-empty string'
+      );
     });
 
     it('should throw error for empty secret', () => {
-      expect(() => generateSessionToken(validSessionId, ''))
-        .toThrow('secret must be a non-empty string');
+      expect(() => generateSessionToken(validSessionId, '')).toThrow(
+        'secret must be a non-empty string'
+      );
     });
 
     it('should throw error for null secret', () => {
-      expect(() => generateSessionToken(validSessionId, null))
-        .toThrow('secret must be a non-empty string');
+      expect(() => generateSessionToken(validSessionId, null)).toThrow(
+        'secret must be a non-empty string'
+      );
     });
 
     it('should throw error for undefined secret', () => {
-      expect(() => generateSessionToken(validSessionId, undefined))
-        .toThrow('secret must be a non-empty string');
+      expect(() => generateSessionToken(validSessionId, undefined)).toThrow(
+        'secret must be a non-empty string'
+      );
     });
 
     it('should throw error for non-string secret', () => {
-      expect(() => generateSessionToken(validSessionId, 12345))
-        .toThrow('secret must be a non-empty string');
+      expect(() => generateSessionToken(validSessionId, 12345)).toThrow(
+        'secret must be a non-empty string'
+      );
     });
 
     it('should handle session IDs with special characters', () => {
@@ -236,7 +244,8 @@ describe('session', () => {
       const dataWithoutColon = Buffer.from('nodatacolonhere').toString('base64');
       // Create signature for this data
       const crypto = require('crypto');
-      const signature = crypto.createHmac('sha256', validSecret)
+      const signature = crypto
+        .createHmac('sha256', validSecret)
         .update('nodatacolonhere')
         .digest('hex');
 
@@ -252,7 +261,8 @@ describe('session', () => {
       const dataWithBadTimestamp = Buffer.from('sessionid:notanumber').toString('base64');
       // Create signature for this data
       const crypto = require('crypto');
-      const signature = crypto.createHmac('sha256', validSecret)
+      const signature = crypto
+        .createHmac('sha256', validSecret)
         .update('sessionid:notanumber')
         .digest('hex');
 

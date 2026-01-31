@@ -30,19 +30,21 @@ describe('health routes', () => {
     mockGetConfiguredPlatforms = vi.fn(() => ['confluence', 'jira']);
     mockGetScenariosByPlatform = vi.fn(() => ({
       confluence: { page: { title: 'Page Management' } },
-      jira: { issue: { title: 'Issue Management' } }
+      jira: { issue: { title: 'Issue Management' } },
     }));
 
     // Clear require cache
-    const paths = [
-      '../../routes/health',
-      '../../services/state',
-      '../../config'
-    ].map(p => {
-      try { return require.resolve(p); } catch { return null; }
-    }).filter(Boolean);
+    const paths = ['../../routes/health', '../../services/state', '../../config']
+      .map((p) => {
+        try {
+          return require.resolve(p);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
-    paths.forEach(p => delete require.cache[p]);
+    paths.forEach((p) => delete require.cache[p]);
 
     // Mock state
     const statePath = require.resolve('../../services/state');
@@ -52,8 +54,8 @@ describe('health routes', () => {
       loaded: true,
       exports: {
         queue: queueArray,
-        getActiveSession: mockGetActiveSession
-      }
+        getActiveSession: mockGetActiveSession,
+      },
     };
 
     // Mock config
@@ -67,8 +69,8 @@ describe('health routes', () => {
         MAX_QUEUE_SIZE: 10,
         AVERAGE_SESSION_MINUTES: 45,
         getConfiguredPlatforms: mockGetConfiguredPlatforms,
-        getScenariosByPlatform: mockGetScenariosByPlatform
-      }
+        getScenariosByPlatform: mockGetScenariosByPlatform,
+      },
     };
 
     // Import modules
@@ -80,12 +82,12 @@ describe('health routes', () => {
     mockApp = {
       get: vi.fn((path, handler) => {
         registeredRoutes[path] = handler;
-      })
+      }),
     };
 
     // Mock Redis client
     mockRedis = {
-      ping: vi.fn().mockResolvedValue('PONG')
+      ping: vi.fn().mockResolvedValue('PONG'),
     };
 
     health.register(mockApp, mockRedis);
@@ -124,7 +126,7 @@ describe('health routes', () => {
       mockRes = {
         set: vi.fn().mockReturnThis(),
         status: vi.fn().mockReturnThis(),
-        json: vi.fn()
+        json: vi.fn(),
       };
     });
 
@@ -133,7 +135,10 @@ describe('health routes', () => {
 
       await handler(mockReq, mockRes);
 
-      expect(mockRes.set).toHaveBeenCalledWith('Cache-Control', 'no-cache, no-store, must-revalidate');
+      expect(mockRes.set).toHaveBeenCalledWith(
+        'Cache-Control',
+        'no-cache, no-store, must-revalidate'
+      );
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         status: 'ok',
@@ -141,8 +146,8 @@ describe('health routes', () => {
         enabled_platforms: ['confluence', 'jira', 'splunk'],
         configured_platforms: ['confluence', 'jira'],
         dependencies: {
-          redis: 'healthy'
-        }
+          redis: 'healthy',
+        },
       });
     });
 
@@ -158,8 +163,8 @@ describe('health routes', () => {
         enabled_platforms: ['confluence', 'jira', 'splunk'],
         configured_platforms: ['confluence', 'jira'],
         dependencies: {
-          redis: 'unhealthy'
-        }
+          redis: 'unhealthy',
+        },
       });
     });
 
@@ -181,17 +186,20 @@ describe('health routes', () => {
       mockReq = {};
       mockRes = {
         set: vi.fn().mockReturnThis(),
-        json: vi.fn()
+        json: vi.fn(),
       };
     });
 
     it('should return liveness status', () => {
       handler(mockReq, mockRes);
 
-      expect(mockRes.set).toHaveBeenCalledWith('Cache-Control', 'no-cache, no-store, must-revalidate');
+      expect(mockRes.set).toHaveBeenCalledWith(
+        'Cache-Control',
+        'no-cache, no-store, must-revalidate'
+      );
       expect(mockRes.json).toHaveBeenCalledWith({
         status: 'ok',
-        timestamp: expect.any(String)
+        timestamp: expect.any(String),
       });
     });
   });
@@ -205,7 +213,7 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/status'];
       mockReq = {};
       mockRes = {
-        json: vi.fn()
+        json: vi.fn(),
       };
     });
 
@@ -221,7 +229,7 @@ describe('health routes', () => {
         estimated_wait: '0 minutes',
         max_queue_size: 10,
         enabled_platforms: ['confluence', 'jira', 'splunk'],
-        configured_platforms: ['confluence', 'jira']
+        configured_platforms: ['confluence', 'jira'],
       });
     });
 
@@ -234,10 +242,10 @@ describe('health routes', () => {
       expect(mockRes.json).toHaveBeenCalledWith({
         queue_size: 2,
         session_active: true,
-        estimated_wait: '90 minutes',  // 2 * 45
+        estimated_wait: '90 minutes', // 2 * 45
         max_queue_size: 10,
         enabled_platforms: ['confluence', 'jira', 'splunk'],
-        configured_platforms: ['confluence', 'jira']
+        configured_platforms: ['confluence', 'jira'],
       });
     });
   });
@@ -251,7 +259,7 @@ describe('health routes', () => {
       handler = registeredRoutes['/api/platforms'];
       mockReq = {};
       mockRes = {
-        json: vi.fn()
+        json: vi.fn(),
       };
     });
 
@@ -263,8 +271,8 @@ describe('health routes', () => {
         configured: ['confluence', 'jira'],
         scenarios: {
           confluence: { page: { title: 'Page Management' } },
-          jira: { issue: { title: 'Issue Management' } }
-        }
+          jira: { issue: { title: 'Issue Management' } },
+        },
       });
     });
   });

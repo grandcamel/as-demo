@@ -10,53 +10,56 @@ const require = createRequire(import.meta.url);
 // Helper function to set up mocks for scenarios module
 function setupScenariosModule(options = {}) {
   const {
-    readFileSyncFn = vi.fn(() => '<!DOCTYPE html><html><head><title>{{TITLE}}</title></head><body>{{ICON}} {{PLATFORM}}: {{CONTENT}}</body></html>'),
+    readFileSyncFn = vi.fn(
+      () =>
+        '<!DOCTYPE html><html><head><title>{{TITLE}}</title></head><body>{{ICON}} {{PLATFORM}}: {{CONTENT}}</body></html>'
+    ),
     readFileFn = vi.fn(),
     markedFn = vi.fn((md) => `<p>${md}</p>`),
     sanitizeFn = vi.fn((html) => html),
     scenarioNames = {
-      'page': {
+      page: {
         file: 'confluence/page.md',
         title: 'Page Management',
         icon: '📝',
-        platform: 'confluence'
+        platform: 'confluence',
       },
-      'malicious': {
+      malicious: {
         file: '../../../etc/passwd',
         title: 'Malicious',
         icon: '💀',
-        platform: 'attack'
-      }
+        platform: 'attack',
+      },
     },
     getScenariosByPlatformFn = vi.fn(() => ({
-      confluence: { page: { title: 'Page Management' } }
-    }))
+      confluence: { page: { title: 'Page Management' } },
+    })),
   } = options;
 
   // Clear require cache
-  const paths = [
-    '../../routes/scenarios',
-    '../../config',
-    'fs',
-    'marked',
-    'isomorphic-dompurify'
-  ].map(p => {
-    try { return require.resolve(p); } catch { return null; }
-  }).filter(Boolean);
+  const paths = ['../../routes/scenarios', '../../config', 'fs', 'marked', 'isomorphic-dompurify']
+    .map((p) => {
+      try {
+        return require.resolve(p);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
-  paths.forEach(p => delete require.cache[p]);
+  paths.forEach((p) => delete require.cache[p]);
 
   // Mock fs
   const fsPath = require.resolve('fs');
   const fsMock = {
     readFileSync: readFileSyncFn,
-    readFile: readFileFn
+    readFile: readFileFn,
   };
   require.cache[fsPath] = {
     id: fsPath,
     filename: fsPath,
     loaded: true,
-    exports: fsMock
+    exports: fsMock,
   };
 
   // Mock marked
@@ -65,7 +68,7 @@ function setupScenariosModule(options = {}) {
     id: markedPath,
     filename: markedPath,
     loaded: true,
-    exports: { marked: markedFn }
+    exports: { marked: markedFn },
   };
 
   // Mock isomorphic-dompurify
@@ -74,7 +77,7 @@ function setupScenariosModule(options = {}) {
     id: dompurifyPath,
     filename: dompurifyPath,
     loaded: true,
-    exports: { sanitize: sanitizeFn }
+    exports: { sanitize: sanitizeFn },
   };
 
   // Mock config
@@ -86,14 +89,14 @@ function setupScenariosModule(options = {}) {
     exports: {
       SCENARIOS_PATH: '/opt/demo-container/scenarios',
       SCENARIO_NAMES: scenarioNames,
-      getScenariosByPlatform: getScenariosByPlatformFn
-    }
+      getScenariosByPlatform: getScenariosByPlatformFn,
+    },
   };
 
   return {
     fs: fsMock,
     config: require('../../config'),
-    scenarios: require('../../routes/scenarios')
+    scenarios: require('../../routes/scenarios'),
   };
 }
 
@@ -116,7 +119,7 @@ describe('scenarios routes', () => {
     mockApp = {
       get: vi.fn((path, handler) => {
         registeredRoutes[path] = handler;
-      })
+      }),
     };
 
     scenarios.register(mockApp);
@@ -140,13 +143,13 @@ describe('scenarios routes', () => {
     beforeEach(() => {
       handler = registeredRoutes['/api/scenarios/:name'];
       mockReq = {
-        params: { name: 'page' }
+        params: { name: 'page' },
       };
       mockRes = {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
         setHeader: vi.fn(),
-        send: vi.fn()
+        send: vi.fn(),
       };
     });
 
@@ -212,7 +215,7 @@ describe('scenarios routes', () => {
       handler = registeredRoutes['/api/scenarios'];
       mockReq = {};
       mockRes = {
-        json: vi.fn()
+        json: vi.fn(),
       };
     });
 
@@ -221,7 +224,7 @@ describe('scenarios routes', () => {
 
       expect(config.getScenariosByPlatform).toHaveBeenCalled();
       expect(mockRes.json).toHaveBeenCalledWith({
-        confluence: { page: { title: 'Page Management' } }
+        confluence: { page: { title: 'Page Management' } },
       });
     });
   });
@@ -237,21 +240,21 @@ describe('scenarios routes', () => {
           callback(null, 'Content');
         }),
         scenarioNames: {
-          'page': {
+          page: {
             file: 'confluence/page.md',
             title: 'Page Management',
             icon: '📝',
-            platform: 'confluence'
-          }
+            platform: 'confluence',
+          },
         },
-        getScenariosByPlatformFn: vi.fn()
+        getScenariosByPlatformFn: vi.fn(),
       });
 
       const localRoutes = {};
       const freshApp = {
         get: vi.fn((path, handler) => {
           localRoutes[path] = handler;
-        })
+        }),
       };
       mocks.scenarios.register(freshApp);
 
@@ -261,7 +264,7 @@ describe('scenarios routes', () => {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
         setHeader: vi.fn(),
-        send: vi.fn()
+        send: vi.fn(),
       };
 
       handler(mockReq, mockRes);
@@ -284,21 +287,21 @@ describe('scenarios routes', () => {
           callback(null, 'Safe content');
         }),
         scenarioNames: {
-          'xss': {
+          xss: {
             file: 'test.md',
             title: '<script>alert("xss")</script>',
             icon: '<img onerror="alert(1)">',
-            platform: 'test'
-          }
+            platform: 'test',
+          },
         },
-        getScenariosByPlatformFn: vi.fn()
+        getScenariosByPlatformFn: vi.fn(),
       });
 
       const localRoutes = {};
       const freshApp = {
         get: vi.fn((path, handler) => {
           localRoutes[path] = handler;
-        })
+        }),
       };
       mocks.scenarios.register(freshApp);
 
@@ -308,7 +311,7 @@ describe('scenarios routes', () => {
         json: vi.fn(),
         status: vi.fn().mockReturnThis(),
         setHeader: vi.fn(),
-        send: vi.fn()
+        send: vi.fn(),
       };
 
       handler(mockReq, mockRes);

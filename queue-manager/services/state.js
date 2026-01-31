@@ -106,5 +106,5 @@ module.exports = {
   tryAcquireReconnectionLock,
   getDisconnectGraceTimeout,
   setDisconnectGraceTimeout,
-  clearDisconnectGraceTimeout
+  clearDisconnectGraceTimeout,
 };

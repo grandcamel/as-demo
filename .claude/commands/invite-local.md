@@ -4,11 +4,11 @@ arguments:
   - name: LABEL
     description: Label for the invite (e.g., "Demo for Acme Corp")
     required: false
-    default: "Local Invite"
+    default: 'Local Invite'
   - name: EXPIRES
     description: Hours until invite expires
     required: false
-    default: "24"
+    default: '24'
 ---
 
 ```bash

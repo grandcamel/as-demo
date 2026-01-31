@@ -20,19 +20,23 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
   const activeSession = state.getActiveSession();
 
   // Check if this is a reconnection to an active session (grace period)
-  if (activeSession && activeSession.awaitingReconnect &&
-      activeSession.inviteToken === inviteToken && activeSession.ip === client.ip) {
-
+  if (
+    activeSession &&
+    activeSession.awaitingReconnect &&
+    activeSession.inviteToken === inviteToken &&
+    activeSession.ip === client.ip
+  ) {
     // Atomically acquire reconnection lock to prevent TOCTOU race condition
     if (!state.tryAcquireReconnectionLock()) {
-      ws.send(formatWsError(
-        ErrorCodes.RECONNECTION_IN_PROGRESS,
-        'Reconnection already in progress'
-      ));
+      ws.send(
+        formatWsError(ErrorCodes.RECONNECTION_IN_PROGRESS, 'Reconnection already in progress')
+      );
       return;
     }
     try {
-      console.log(`Client ${client.id} reconnecting to session ${activeSession.sessionId} during grace period`);
+      console.log(
+        `Client ${client.id} reconnecting to session ${activeSession.sessionId} during grace period`
+      );
 
       // Cancel the grace period timeout
       state.clearDisconnectGraceTimeout();
@@ -48,18 +52,22 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
       client.pendingSessionToken = activeSession.sessionToken;
 
       // Send session info to client
-      ws.send(JSON.stringify({
-        type: 'session_token',
-        session_token: activeSession.sessionToken
-      }));
-      ws.send(JSON.stringify({
-        type: 'session_starting',
-        terminal_url: '/terminal',
-        expires_at: activeSession.expiresAt.toISOString(),
-        session_token: activeSession.sessionToken,
-        reconnected: true,
-        enabled_platforms: config.ENABLED_PLATFORMS
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'session_token',
+          session_token: activeSession.sessionToken,
+        })
+      );
+      ws.send(
+        JSON.stringify({
+          type: 'session_starting',
+          terminal_url: '/terminal',
+          expires_at: activeSession.expiresAt.toISOString(),
+          session_token: activeSession.sessionToken,
+          reconnected: true,
+          enabled_platforms: config.ENABLED_PLATFORMS,
+        })
+      );
 
       console.log(`Session ${activeSession.sessionId} reconnected successfully`);
     } finally {
@@ -70,10 +78,7 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
 
   // Check if already in queue
   if (state.queue.includes(client.id)) {
-    ws.send(formatWsError(
-      ErrorCodes.ALREADY_IN_QUEUE,
-      'Already in queue'
-    ));
+    ws.send(formatWsError(ErrorCodes.ALREADY_IN_QUEUE, 'Already in queue'));
     return;
   }
 
@@ -91,12 +96,14 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
       };
       const errorCode = codeMap[validation.reason] || ErrorCodes.INVITE_INVALID;
 
-      ws.send(JSON.stringify({
-        type: 'invite_invalid',
-        code: errorCode,
-        reason: validation.reason,
-        message: validation.message
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'invite_invalid',
+          code: errorCode,
+          reason: validation.reason,
+          message: validation.message,
+        })
+      );
       return;
     }
     client.inviteToken = inviteToken;
@@ -106,11 +113,13 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
 
   // Check queue size limit
   if (state.queue.length >= config.MAX_QUEUE_SIZE) {
-    ws.send(JSON.stringify({
-      type: 'queue_full',
-      code: ErrorCodes.QUEUE_FULL,
-      message: 'Queue is full. Please try again later.'
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'queue_full',
+        code: ErrorCodes.QUEUE_FULL,
+        message: 'Queue is full. Please try again later.',
+      })
+    );
     return;
   }
 
@@ -120,15 +129,17 @@ async function joinQueue(redis, ws, client, inviteToken, processQueueFn) {
     clientId: client.id,
     inviteToken: inviteToken || null,
     ip: client.ip,
-    createdAt: new Date()
+    createdAt: new Date(),
   });
   client.pendingSessionToken = pendingToken;
 
   // Send token immediately so client can set cookie
-  ws.send(JSON.stringify({
-    type: 'session_token',
-    session_token: pendingToken
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'session_token',
+      session_token: pendingToken,
+    })
+  );
 
   // Add to queue
   state.queue.push(client.id);
@@ -173,12 +184,14 @@ function sendQueuePosition(ws, client) {
   const position = state.queue.indexOf(client.id) + 1;
   const estimatedWait = position * config.AVERAGE_SESSION_MINUTES;
 
-  ws.send(JSON.stringify({
-    type: 'queue_position',
-    position: position,
-    estimated_wait: `${estimatedWait} minutes`,
-    queue_size: state.queue.length
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'queue_position',
+      position: position,
+      estimated_wait: `${estimatedWait} minutes`,
+      queue_size: state.queue.length,
+    })
+  );
 }
 
 /**
@@ -218,5 +231,5 @@ module.exports = {
   leaveQueue,
   sendQueuePosition,
   broadcastQueueUpdate,
-  processQueue
+  processQueue,
 };

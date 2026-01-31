@@ -4,13 +4,12 @@
 
 const config = require('../config');
 const state = require('../services/state');
-const { checkInviteRateLimit, recordFailedInviteAttempt, validateInvite } = require('../services/invite');
 const {
-  ErrorCodes,
-  AuthError,
-  ValidationError,
-  RateLimitError,
-} = require('../errors');
+  checkInviteRateLimit,
+  recordFailedInviteAttempt,
+  validateInvite,
+} = require('../services/invite');
+const { ErrorCodes, AuthError, ValidationError, RateLimitError } = require('../errors');
 
 /**
  * Register session routes.
@@ -23,10 +22,7 @@ function register(app, redis) {
     const sessionCookie = req.cookies.demo_session;
 
     if (!sessionCookie) {
-      const error = new AuthError(
-        ErrorCodes.NO_SESSION_COOKIE,
-        'No session cookie'
-      );
+      const error = new AuthError(ErrorCodes.NO_SESSION_COOKIE, 'No session cookie');
       return res.status(error.statusCode).json(error.toJSON());
     }
 
@@ -51,10 +47,7 @@ function register(app, redis) {
       state.sessionTokens.delete(sessionCookie);
     }
 
-    const error = new AuthError(
-      ErrorCodes.SESSION_NOT_ACTIVE,
-      'Session not active'
-    );
+    const error = new AuthError(ErrorCodes.SESSION_NOT_ACTIVE, 'Session not active');
     return res.status(error.statusCode).json(error.toJSON());
   });
 
@@ -63,11 +56,9 @@ function register(app, redis) {
     const { token } = req.body;
 
     if (!token || typeof token !== 'string') {
-      const error = new ValidationError(
-        ErrorCodes.INVALID_INPUT,
-        'Token required',
-        { field: 'token' }
-      );
+      const error = new ValidationError(ErrorCodes.INVALID_INPUT, 'Token required', {
+        field: 'token',
+      });
       return res.status(error.statusCode).json(error.toJSON());
     }
 
@@ -76,10 +67,7 @@ function register(app, redis) {
     const isPendingToken = state.pendingSessionTokens.has(token);
 
     if (!isActiveToken && !isPendingToken) {
-      const error = new AuthError(
-        ErrorCodes.INVALID_TOKEN,
-        'Invalid token'
-      );
+      const error = new AuthError(ErrorCodes.INVALID_TOKEN, 'Invalid token');
       return res.status(error.statusCode).json(error.toJSON());
     }
 
@@ -89,7 +77,7 @@ function register(app, redis) {
       secure: config.COOKIE_SECURE,
       sameSite: 'strict',
       maxAge: config.SESSION_TIMEOUT_MINUTES * 60 * 1000,
-      path: '/'
+      path: '/',
     });
 
     res.json({ success: true });
@@ -101,7 +89,7 @@ function register(app, redis) {
       httpOnly: true,
       secure: config.COOKIE_SECURE,
       sameSite: 'strict',
-      path: '/'
+      path: '/',
     });
     res.json({ success: true });
   });
@@ -110,7 +98,8 @@ function register(app, redis) {
   app.get('/api/invite/validate', async (req, res) => {
     // Token comes from X-Invite-Token header (set by nginx from path) or query param
     const token = req.headers['x-invite-token'] || req.query.token;
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
+    const clientIp =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
 
     // Check rate limit before validating (brute-force protection)
     const rateLimit = checkInviteRateLimit(clientIp);
@@ -123,20 +112,18 @@ function register(app, redis) {
       );
       return res.status(error.statusCode).json({
         valid: false,
-        ...error.toJSON()
+        ...error.toJSON(),
       });
     }
 
     if (!token) {
       recordFailedInviteAttempt(clientIp);
-      const error = new AuthError(
-        ErrorCodes.INVITE_MISSING,
-        'Invite token required',
-        { reason: 'missing' }
-      );
+      const error = new AuthError(ErrorCodes.INVITE_MISSING, 'Invite token required', {
+        reason: 'missing',
+      });
       return res.status(error.statusCode).json({
         valid: false,
-        ...error.toJSON()
+        ...error.toJSON(),
       });
     }
 
@@ -158,14 +145,10 @@ function register(app, redis) {
       };
       const errorCode = codeMap[validation.reason] || ErrorCodes.INVITE_INVALID;
 
-      const error = new AuthError(
-        errorCode,
-        validation.message,
-        { reason: validation.reason }
-      );
+      const error = new AuthError(errorCode, validation.message, { reason: validation.reason });
       res.status(error.statusCode).json({
         valid: false,
-        ...error.toJSON()
+        ...error.toJSON(),
       });
     }
   });

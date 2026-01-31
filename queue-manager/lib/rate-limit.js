@@ -26,11 +26,7 @@
  * }
  */
 function createRateLimiter(options) {
-  const {
-    windowMs,
-    maxAttempts,
-    cleanupThreshold = 1000
-  } = options;
+  const { windowMs, maxAttempts, cleanupThreshold = 1000 } = options;
 
   if (!windowMs || windowMs <= 0) {
     throw new Error('windowMs must be a positive number');
@@ -139,7 +135,7 @@ function createRateLimiter(options) {
     recordFailure,
     cleanup,
     reset,
-    size
+    size,
   };
 }
 
@@ -155,7 +151,7 @@ function createConnectionRateLimiter(options = {}) {
   return createRateLimiter({
     windowMs: options.windowMs || 60 * 1000,
     maxAttempts: options.maxConnections || 10,
-    cleanupThreshold: options.cleanupThreshold || 1000
+    cleanupThreshold: options.cleanupThreshold || 1000,
   });
 }
 
@@ -171,12 +167,12 @@ function createInviteRateLimiter(options = {}) {
   return createRateLimiter({
     windowMs: options.windowMs || 60 * 60 * 1000,
     maxAttempts: options.maxAttempts || 10,
-    cleanupThreshold: options.cleanupThreshold || 500
+    cleanupThreshold: options.cleanupThreshold || 500,
   });
 }
 
 module.exports = {
   createRateLimiter,
   createConnectionRateLimiter,
-  createInviteRateLimiter
+  createInviteRateLimiter,
 };
