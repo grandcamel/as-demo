@@ -135,6 +135,34 @@ make lint
 make lint-fix
 ```
 
+### Pre-commit Hooks
+
+Pre-commit hooks are configured in `.pre-commit-config.yaml`:
+
+```bash
+# Install hooks (one-time setup)
+pre-commit install
+
+# Run on all files
+pre-commit run --all-files
+
+# Bypass hooks for direct commits to main (use sparingly)
+git commit --no-verify -m "message"
+```
+
+**Configured Hooks:**
+
+- `trailing-whitespace`, `end-of-file-fixer` - File hygiene
+- `check-yaml`, `check-json` - Syntax validation
+- `no-commit-to-branch` - Blocks direct commits to main
+- `prettier` - Format JS/JSON/YAML/Markdown
+- `gitleaks` - Detect hardcoded secrets
+- `shellcheck` - Lint shell scripts
+- `ruff` - Python linting and formatting
+- `oxlint` - Fast JavaScript linting
+
+**Important:** The `no-commit-to-branch` hook intentionally blocks commits directly to main. Use `--no-verify` only for legitimate direct commits (releases, CI fixes).
+
 ### Code Review
 
 Use the `code-reviewer` agent for security and quality review:
@@ -772,6 +800,20 @@ upstream terminal { server queue-manager:7681; }
 - Git doesn't track empty directories
 - Dockerfiles with `COPY dir/` fail if directory is empty
 - **Fix**: Add `.gitkeep` file to empty directories that must exist
+
+### Pre-commit Hook Failures
+
+**Commit Blocked on Main Branch**
+
+- **Symptom**: `git commit` fails with `no-commit-to-branch` error
+- **Cause**: Pre-commit hook intentionally blocks direct commits to main
+- **Fix**: Either create a feature branch (preferred) or use `git commit --no-verify` for legitimate direct commits
+
+**Prettier Modifies Files During Commit**
+
+- **Symptom**: Commit fails, `prettier` shows "files were modified by this hook"
+- **Cause**: Prettier auto-formatted files that weren't staged
+- **Fix**: `git add` the modified files and commit again (or use `pre-commit run --all-files` first)
 
 ### Server Deployment
 
