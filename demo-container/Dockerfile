@@ -13,6 +13,12 @@ USER root
 # Update base image packages to fix CVEs
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
+# Update Python packages to fix CVEs (setuptools, wheel, jaraco.context)
+RUN pip install --no-cache-dir --break-system-packages --upgrade \
+    "setuptools>=78.1.1" \
+    "wheel>=0.46.2" \
+    "jaraco.context>=6.1.0"
+
 # Update Go to fix CVEs (CVE-2024-24790, CVE-2023-45288, etc.)
 # Base image has Go 1.22.0 with known vulnerabilities
 ARG GO_VERSION=1.24.12
