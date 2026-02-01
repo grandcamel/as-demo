@@ -204,9 +204,9 @@ class DockerCommandBuilder:
                 args.extend(["-v", f"{lib_path}:/opt/{config.lib_name}:ro"])
 
         # Checkpoint directory (for persistence across container runs)
-        checkpoint_dir = Path("/tmp/checkpoints")
+        checkpoint_dir = Path("/tmp/checkpoints")  # nosec B108 - intentional for checkpoint persistence
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        args.extend(["-v", "/tmp/checkpoints:/tmp/checkpoints"])
+        args.extend(["-v", "/tmp/checkpoints:/tmp/checkpoints"])  # nosec B108
 
         # Extra volumes
         for host, container, mode in self.extra_volumes:
