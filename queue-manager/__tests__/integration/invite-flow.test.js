@@ -4,7 +4,10 @@
  * Tests the complete invite lifecycle: create, validate, redeem, expire.
  */
 
-const { describe, it, expect, beforeEach, afterEach, vi } = require('vitest');
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 const { createMockRedis, createInviteToken } = require('../mocks');
 
 describe('Invite Flow', () => {

@@ -4,8 +4,11 @@
  * Tests multi-client queue scenarios and session handoff.
  */
 
-const { describe, it, expect, beforeEach, afterEach, vi } = require('vitest');
-const { createMockRedis, createMockWsClient, createClient, createQueueState } = require('../mocks');
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { createMockRedis, createClient } = require('../mocks');
 
 describe('Queue Processing', () => {
   let redis;

@@ -4,8 +4,11 @@
  * Tests the complete flow from connection to session end.
  */
 
-const { describe, it, expect, beforeEach, afterEach, vi } = require('vitest');
-const { createMockRedis, createMockWsClient, createClient, createConfig } = require('../mocks');
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { createMockRedis, createMockWsClient, createClient } = require('../mocks');
 
 // Mock the state module
 vi.mock('../../services/state', () => ({
