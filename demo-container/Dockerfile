@@ -10,6 +10,9 @@ FROM ${BASE_IMAGE}
 
 USER root
 
+# Update base image packages to fix CVEs
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 # Update Go to fix CVEs (CVE-2024-24790, CVE-2023-45288, etc.)
 # Base image has Go 1.22.0 with known vulnerabilities
 ARG GO_VERSION=1.24.12
