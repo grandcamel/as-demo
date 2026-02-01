@@ -124,7 +124,10 @@ function validatePlatformConfig(config, platformId) {
   }
 
   // Optional: validateCredentials (if present, must be function)
-  if (config.validateCredentials !== undefined && typeof config.validateCredentials !== 'function') {
+  if (
+    config.validateCredentials !== undefined &&
+    typeof config.validateCredentials !== 'function'
+  ) {
     errors.push(`${platformId}: validateCredentials must be a function`);
   }
 

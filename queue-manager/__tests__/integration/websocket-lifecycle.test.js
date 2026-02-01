@@ -73,7 +73,11 @@ describe('WebSocket Lifecycle', () => {
     });
 
     it('should track queue position updates', async () => {
-      const clients = [createClient({ id: 'client-1' }), createClient({ id: 'client-2' }), createClient({ id: 'client-3' })];
+      const clients = [
+        createClient({ id: 'client-1' }),
+        createClient({ id: 'client-2' }),
+        createClient({ id: 'client-3' }),
+      ];
 
       for (const client of clients) {
         await redis.rpush('queue:clients', client.id);

@@ -65,7 +65,6 @@ For each plugin with `source.source: "github"`:
    Or for local: read `.claude-plugin/plugin.json`
 
 3. **Validate plugin.json schema:**
-
    - `name` (string, required) - must match marketplace entry name
    - `version` (string, required)
    - `description` (string, optional)
@@ -80,14 +79,12 @@ For each plugin with `source.source: "github"`:
 For each plugin repo, check:
 
 1. **Component directories exist** (at least one of):
-
    - `skills/` directory
    - `agents/` directory
    - `commands/` directory
    - `hooks/` directory
 
 2. **Glob patterns resolve to files:**
-
    - For each pattern in plugin.json (e.g., `"skills/**/*.md"`), verify matching files exist
    - FAIL if a glob pattern matches zero files
 

@@ -4,12 +4,12 @@ This document covers the testing infrastructure for AS-Demo, including how to ru
 
 ## Test Suites Overview
 
-| Suite | Location | Purpose | How to Run |
-|-------|----------|---------|------------|
-| Unit Tests | `queue-manager/__tests__/**/*.test.js` | Test individual modules | `npm test` |
-| Integration Tests | `queue-manager/__tests__/integration/*.test.js` | Test module interactions | `npm test` |
-| Skill Tests | `demo-container/skill-test.py` | Test Claude Code skills | `make test-skill` |
-| Validation Suite | `scripts/validate/*` | Validate configs and security | `make validate` |
+| Suite             | Location                                        | Purpose                       | How to Run        |
+| ----------------- | ----------------------------------------------- | ----------------------------- | ----------------- |
+| Unit Tests        | `queue-manager/__tests__/**/*.test.js`          | Test individual modules       | `npm test`        |
+| Integration Tests | `queue-manager/__tests__/integration/*.test.js` | Test module interactions      | `npm test`        |
+| Skill Tests       | `demo-container/skill-test.py`                  | Test Claude Code skills       | `make test-skill` |
+| Validation Suite  | `scripts/validate/*`                            | Validate configs and security | `make validate`   |
 
 ## Unit Tests
 
@@ -31,12 +31,14 @@ npm run test:coverage
 ### Coverage Thresholds
 
 Global thresholds (enforced by CI):
+
 - Lines: 60%
 - Functions: 60%
 - Branches: 50%
 - Statements: 60%
 
 Per-file thresholds for critical utilities (100%):
+
 - `lib/rate-limit.js`
 - `lib/env-file.js`
 - `config/platforms/*.js`
@@ -46,12 +48,14 @@ Per-file thresholds for critical utilities (100%):
 ### Adding Unit Tests
 
 1. Create test file alongside source:
+
    ```
    services/queue.js       # Source
    __tests__/services/queue.test.js  # Test
    ```
 
 2. Use the mock infrastructure:
+
    ```javascript
    const { createMockRedis, createClient, createConfig } = require('../mocks');
 
@@ -73,6 +77,7 @@ Per-file thresholds for critical utilities (100%):
    ```
 
 3. For dependency injection tests:
+
    ```javascript
    const { createDefaultDeps, startSession } = require('../../services/session');
 
@@ -202,11 +207,11 @@ fi
 
 Located in `queue-manager/__tests__/mocks/`:
 
-| Mock | Purpose |
-|------|---------|
-| `MockRedis` | In-memory Redis operations |
+| Mock            | Purpose                         |
+| --------------- | ------------------------------- |
+| `MockRedis`     | In-memory Redis operations      |
 | `MockWebSocket` | WebSocket connection simulation |
-| `fixtures.js` | Test data builders |
+| `fixtures.js`   | Test data builders              |
 
 ### Using Mock Redis
 
@@ -216,10 +221,10 @@ const { createMockRedis } = require('../mocks');
 const redis = createMockRedis();
 
 await redis.set('key', 'value');
-await redis.get('key');  // 'value'
+await redis.get('key'); // 'value'
 
 // Verify calls
-redis.getCalls();        // All recorded calls
+redis.getCalls(); // All recorded calls
 redis.getCallsFor('set'); // Only 'set' calls
 ```
 
@@ -233,8 +238,8 @@ const ws = createMockWsClient();
 ws.send(JSON.stringify({ type: 'welcome' }));
 
 // Verify messages
-ws.getSentMessages();     // All sent messages
-ws.getLastMessage();      // Last message
+ws.getSentMessages(); // All sent messages
+ws.getLastMessage(); // Last message
 ws.getMessagesByType('welcome'); // Filter by type
 ```
 
@@ -290,9 +295,11 @@ console.log(redis.getCalls());
 console.log(JSON.stringify(ws.getSentMessages(), null, 2));
 
 // Check mock function calls
-expect(mockFn).toHaveBeenCalledWith(expect.objectContaining({
-  clientId: 'expected-id',
-}));
+expect(mockFn).toHaveBeenCalledWith(
+  expect.objectContaining({
+    clientId: 'expected-id',
+  })
+);
 ```
 
 ### Running Single Test

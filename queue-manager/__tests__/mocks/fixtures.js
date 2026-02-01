@@ -97,7 +97,8 @@ function createInviteToken(overrides = {}) {
     label: overrides.label || 'Test Invite',
     createdAt: createdAt.toISOString(),
     expiresAt:
-      overrides.expiresAt || new Date(createdAt.getTime() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
+      overrides.expiresAt ||
+      new Date(createdAt.getTime() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
     usageCount: overrides.usageCount || 0,
     maxUsages: overrides.maxUsages || 10,
     createdBy: overrides.createdBy || 'test',

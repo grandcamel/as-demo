@@ -512,7 +512,6 @@ export SPLUNK_MOCK_MODE=true
 ## Adding New Cross-Platform Scenarios
 
 1. Create scenario files:
-
    - `demo-container/scenarios/cross-platform/<name>.md` (documentation)
    - `demo-container/scenarios/cross-platform/<name>.prompts` (test prompts)
 

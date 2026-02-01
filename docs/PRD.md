@@ -295,7 +295,6 @@ SPLUNK_HEC_TOKEN=demo-hec-token-12345
 ### To Copy from Existing Demos
 
 1. **From confluence-demo:**
-
    - `demo-container/autoplay.sh`
    - `demo-container/skill-test.py`
    - `demo-container/patches/` (mock persistence)
@@ -303,7 +302,6 @@ SPLUNK_HEC_TOKEN=demo-hec-token-12345
    - `scripts/cleanup_demo_sandbox.py` → `scripts/cleanup_confluence_sandbox.py`
 
 2. **From jira-demo:**
-
    - Seed/cleanup scripts
    - Additional scenario .prompts files
 
@@ -316,13 +314,11 @@ SPLUNK_HEC_TOKEN=demo-hec-token-12345
 ### To Create
 
 1. **Grafana Dashboards:**
-
    - `observability/dashboards/demo-home.json` (actual dashboard)
    - Queue metrics dashboard
    - Session analytics dashboard
 
 2. **Test Infrastructure:**
-
    - `.prompts` files for automated testing
    - Mock API fixtures for each platform
 
