@@ -512,6 +512,7 @@ export SPLUNK_MOCK_MODE=true
 ## Adding New Cross-Platform Scenarios
 
 1. Create scenario files:
+
    - `demo-container/scenarios/cross-platform/<name>.md` (documentation)
    - `demo-container/scenarios/cross-platform/<name>.prompts` (test prompts)
 
@@ -599,6 +600,116 @@ doctl projects update <id> --name <name>
 ```
 
 Runs: `ssh root@143.110.131.254 "cd /opt/as-demo && make invite LABEL='...' EXPIRES=..."`
+
+## Shorthand Commands
+
+For quick operations, use these Make targets:
+
+```bash
+# Local development
+make dev                    # Start local (Atlassian only)
+make dev-full               # Start with Splunk (needs 4GB+ RAM)
+make down                   # Stop all services
+make logs                   # View all logs
+make logs-queue             # Queue manager logs only
+
+# Testing
+make test-skill PLATFORM=confluence SCENARIO=page    # Run skill test
+make refine-skill PLATFORM=confluence SCENARIO=page  # Iterative refinement
+make test-skill-mock        # Mock mode (no API calls)
+
+# Validation
+make validate               # Run all validations
+make lint                   # Run oxlint
+```
+
+## Multi-Agent Safety
+
+When multiple agents are working on this codebase:
+
+### Scoped Commits
+
+Use `scripts/committer` to stage only specific files:
+
+```bash
+# Good: scoped commit
+scripts/committer "fix: resolve queue race condition" queue-manager/services/queue.js
+
+# Bad: avoid these patterns
+git add .                   # Stages everything
+git add -A                  # Stages everything including deletions
+```
+
+The committer script:
+
+- Only stages specified files
+- Prevents accidental `git add .`
+- Blocks node_modules and secrets directories
+- Handles stale git locks with `--force`
+
+### Branch Discipline
+
+- Do NOT switch branches unless explicitly requested
+- Do NOT create/apply/drop `git stash` entries
+- Do NOT modify `.worktrees/*` unless requested
+- Focus on your assigned changes only
+- When you see unrecognized files, continue working on your own changes
+
+### Conflict Resolution
+
+- When staging, scope to your changes only
+- If staged+unstaged diffs are formatting-only, auto-resolve
+- For lint/format changes, include in same commit or tiny follow-up
+- Only ask when changes are semantic (logic/data/behavior)
+
+## Tool Usage Patterns
+
+### Skill Testing Flow
+
+```bash
+# 1. Test a skill
+/test-skill PLATFORM=confluence SCENARIO=page
+
+# 2. Review results
+# The test will show expected vs actual tool calls
+
+# 3. Refine if needed
+/refine-skill PLATFORM=confluence SCENARIO=page MAX_ATTEMPTS=3
+```
+
+### Mock Mode Tips
+
+When testing without real API calls:
+
+```bash
+# Enable mock mode
+export MOCK=true
+
+# Mock state persists in /tmp/mock_state_*.json
+# Check mock responses in demo-container/sitecustomize.py
+
+# Reset mock state between tests
+rm /tmp/mock_state_*.json
+```
+
+### Dependency Injection
+
+Services support DI for testability:
+
+```javascript
+// In production
+const { startSession } = require('./services/session');
+await startSession(redis, ws, client, processQueue);
+
+// In tests
+const deps = {
+  config: mockConfig,
+  state: mockState,
+  spawn: mockSpawn,
+  // ... other mocks
+};
+await startSession(redis, ws, client, processQueue, deps);
+```
 
 ## Lessons Learned & Common Pitfalls
 

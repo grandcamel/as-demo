@@ -3,6 +3,11 @@
  *
  * Uses @demo-platform/queue-manager-core for session tokens and env files.
  * Supports multi-platform configuration (Confluence, JIRA, Splunk).
+ *
+ * Dependency Injection:
+ * - Functions accept an optional `deps` parameter for testability
+ * - Use createDefaultDeps() to get default dependencies
+ * - Pass custom deps for unit testing without mocking modules
  */
 
 const { spawn } = require('child_process');
@@ -28,6 +33,34 @@ const { recordInviteUsage } = require('./invite');
 const { ErrorCodes, formatWsError } = require('../errors');
 
 /**
+ * Create default dependencies for session service.
+ * Override any of these in tests for mocking.
+ * @returns {Object} Default dependencies
+ */
+function createDefaultDeps() {
+  return {
+    config,
+    state,
+    spawn,
+    uuidv4,
+    coreGenerateToken,
+    coreCreateEnvFile,
+    getTracer,
+    metrics: {
+      sessionsStartedCounter,
+      sessionsEndedCounter,
+      sessionDurationHistogram,
+      queueWaitHistogram,
+      ttydSpawnHistogram,
+      sandboxCleanupHistogram,
+    },
+    recordInviteUsage,
+    ErrorCodes,
+    formatWsError,
+  };
+}
+
+/**
  * Generate a session token.
  * @param {string} sessionId - Session ID
  * @returns {string} Session token
@@ -49,10 +82,11 @@ function clearSessionToken(sessionToken) {
 /**
  * Find WebSocket for a client ID.
  * @param {string} clientId - Client ID to find
+ * @param {Object} [st] - Optional state object for testing
  * @returns {WebSocket|null} WebSocket or null
  */
-function findClientWs(clientId) {
-  for (const [ws, client] of state.clients.entries()) {
+function findClientWs(clientId, st = state) {
+  for (const [ws, client] of st.clients.entries()) {
     if (client.id === clientId) {
       return ws;
     }
@@ -80,10 +114,12 @@ function createSessionEnvFile(sessionId) {
 
 /**
  * Run sandbox cleanup scripts for all configured platforms.
+ * @param {Object} [deps] - Optional dependencies for testing
  */
-function runSandboxCleanup() {
-  const tracer = getTracer();
-  const configuredPlatforms = config.getConfiguredPlatforms();
+function runSandboxCleanup(deps = createDefaultDeps()) {
+  const { config: cfg, spawn: spawnFn, metrics } = deps;
+  const tracer = deps.getTracer();
+  const configuredPlatforms = cfg.getConfiguredPlatforms();
 
   for (const platform of configuredPlatforms) {
     const span = tracer?.startSpan(`sandbox.cleanup.${platform}`);
@@ -92,7 +128,7 @@ function runSandboxCleanup() {
     console.log(`Running ${platform} sandbox cleanup...`);
 
     // Build platform-specific environment
-    const platformConfig = config.platforms[platform];
+    const platformConfig = cfg.platforms[platform];
     const platformEnv = {
       ...process.env,
       ...platformConfig.getEnvVars(),
@@ -100,11 +136,11 @@ function runSandboxCleanup() {
     };
 
     const scriptPath = `/opt/scripts/cleanup_${platform}_sandbox.py`;
-    const cleanup = spawn('python3', [scriptPath], { env: platformEnv });
+    const cleanup = spawnFn('python3', [scriptPath], { env: platformEnv });
 
     cleanup.on('exit', (code) => {
       const durationSeconds = (Date.now() - startTime) / 1000;
-      sandboxCleanupHistogram?.record(durationSeconds, {
+      metrics.sandboxCleanupHistogram?.record(durationSeconds, {
         success: code === 0 ? 'true' : 'false',
         platform: platform,
       });
@@ -139,9 +175,11 @@ function runSandboxCleanup() {
  * @param {WebSocket} ws - WebSocket connection
  * @param {Object} client - Client object
  * @param {Function} processQueue - Queue processing callback
+ * @param {Object} [deps] - Optional dependencies for testing
  */
-async function startSession(redis, ws, client, processQueue) {
-  const tracer = getTracer();
+async function startSession(redis, ws, client, processQueue, deps = createDefaultDeps()) {
+  const { config: cfg, state: st, spawn: spawnFn, uuidv4: uuid, metrics } = deps;
+  const tracer = deps.getTracer();
   const span = tracer?.startSpan('session.start', {
     attributes: {
       'session.client_id': client.id,
@@ -151,16 +189,16 @@ async function startSession(redis, ws, client, processQueue) {
   });
 
   console.log(`Starting session for client ${client.id}`);
-  console.log(`Enabled platforms: ${config.ENABLED_PLATFORMS.join(', ')}`);
+  console.log(`Enabled platforms: ${cfg.ENABLED_PLATFORMS.join(', ')}`);
   const spawnStartTime = Date.now();
-  const sessionId = uuidv4();
+  const sessionId = uuid();
   let envFileCleanup = null;
 
   try {
     // Remove from queue
-    const queueIndex = state.queue.indexOf(client.id);
+    const queueIndex = st.queue.indexOf(client.id);
     if (queueIndex !== -1) {
-      state.queue.splice(queueIndex, 1);
+      st.queue.splice(queueIndex, 1);
     }
 
     client.state = 'active';
@@ -171,7 +209,7 @@ async function startSession(redis, ws, client, processQueue) {
 
     // Start ttyd with demo container
     // Sensitive env vars are passed via --env-file (not visible in ps aux)
-    const ttydProcess = spawn(
+    const ttydProcess = spawnFn(
       'ttyd',
       [
         '--port',
@@ -222,9 +260,9 @@ async function startSession(redis, ws, client, processQueue) {
         '-e',
         'TERM=xterm',
         '-e',
-        `SESSION_TIMEOUT_MINUTES=${config.SESSION_TIMEOUT_MINUTES}`,
+        `SESSION_TIMEOUT_MINUTES=${cfg.SESSION_TIMEOUT_MINUTES}`,
         '-e',
-        `ENABLED_PLATFORMS=${config.ENABLED_PLATFORMS.join(',')}`,
+        `ENABLED_PLATFORMS=${cfg.ENABLED_PLATFORMS.join(',')}`,
         '-e',
         `ENABLE_AUTOPLAY=${process.env.ENABLE_AUTOPLAY || 'false'}`,
         '-e',
@@ -233,7 +271,7 @@ async function startSession(redis, ws, client, processQueue) {
         `AUTOPLAY_SHOW_TOOLS=${process.env.AUTOPLAY_SHOW_TOOLS || 'false'}`,
         '-e',
         `OTEL_ENDPOINT=${process.env.OTEL_ENDPOINT || ''}`,
-        config.DEMO_CONTAINER_IMAGE,
+        cfg.DEMO_CONTAINER_IMAGE,
       ],
       {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -250,24 +288,24 @@ async function startSession(redis, ws, client, processQueue) {
 
     // Record spawn time
     const spawnDuration = (Date.now() - spawnStartTime) / 1000;
-    ttydSpawnHistogram?.record(spawnDuration);
+    metrics.ttydSpawnHistogram?.record(spawnDuration);
     span?.setAttribute('ttyd.spawn_seconds', spawnDuration);
 
     const startedAt = new Date();
-    const expiresAt = new Date(startedAt.getTime() + config.SESSION_TIMEOUT_MINUTES * 60 * 1000);
+    const expiresAt = new Date(startedAt.getTime() + cfg.SESSION_TIMEOUT_MINUTES * 60 * 1000);
     const queueWaitMs = client.joinedAt ? startedAt - client.joinedAt : 0;
 
     // Record queue wait time
     if (queueWaitMs > 0) {
-      queueWaitHistogram?.record(queueWaitMs / 1000);
+      metrics.queueWaitHistogram?.record(queueWaitMs / 1000);
       span?.setAttribute('session.queue_wait_seconds', queueWaitMs / 1000);
     }
 
     // Promote pending session token to active session token
     const sessionToken = client.pendingSessionToken;
     if (sessionToken) {
-      state.pendingSessionTokens.delete(sessionToken);
-      state.sessionTokens.set(sessionToken, sessionId);
+      st.pendingSessionTokens.delete(sessionToken);
+      st.sessionTokens.set(sessionToken, sessionId);
     }
 
     const activeSession = {
@@ -285,7 +323,7 @@ async function startSession(redis, ws, client, processQueue) {
       envFileCleanup: envFileCleanup,
     };
 
-    state.setActiveSession(activeSession);
+    st.setActiveSession(activeSession);
 
     // Transfer ownership of envFileCleanup to activeSession
     // This prevents double-cleanup if an error occurs after this point
@@ -294,21 +332,21 @@ async function startSession(redis, ws, client, processQueue) {
     // Handle ttyd exit
     ttydProcess.on('exit', (code) => {
       console.log(`ttyd exited with code ${code}`);
-      const currentSession = state.getActiveSession();
+      const currentSession = st.getActiveSession();
       // Clear hard timeout since process exited normally
       if (currentSession && currentSession.hardTimeout) {
         clearTimeout(currentSession.hardTimeout);
         currentSession.hardTimeout = null;
       }
       if (currentSession && currentSession.clientId === client.id) {
-        endSession(redis, 'container_exit', processQueue);
+        endSession(redis, 'container_exit', processQueue, deps);
       }
     });
 
     // Hard timeout: force-kill ttyd if still running after session timeout + 5 min grace
-    const hardTimeoutMs = (config.SESSION_TIMEOUT_MINUTES + 5) * 60 * 1000;
+    const hardTimeoutMs = (cfg.SESSION_TIMEOUT_MINUTES + 5) * 60 * 1000;
     const hardTimeout = setTimeout(() => {
-      const currentSession = state.getActiveSession();
+      const currentSession = st.getActiveSession();
       if (currentSession && currentSession.ttydProcess && currentSession.clientId === client.id) {
         console.log(`Hard timeout reached for session ${sessionId}, force-killing ttyd`);
         try {
@@ -328,13 +366,13 @@ async function startSession(redis, ws, client, processQueue) {
         terminal_url: '/terminal',
         expires_at: expiresAt.toISOString(),
         session_token: sessionToken,
-        enabled_platforms: config.ENABLED_PLATFORMS,
+        enabled_platforms: cfg.ENABLED_PLATFORMS,
       })
     );
 
     // Schedule warning and timeout
-    scheduleSessionWarning(ws, client);
-    scheduleSessionTimeout(redis, client, processQueue);
+    scheduleSessionWarning(ws, client, cfg);
+    scheduleSessionTimeout(redis, client, processQueue, deps);
 
     // Save to Redis for persistence
     await redis.set(
@@ -347,14 +385,14 @@ async function startSession(redis, ws, client, processQueue) {
         ip: client.ip,
         userAgent: client.userAgent,
         queueWaitMs: queueWaitMs,
-        enabledPlatforms: config.ENABLED_PLATFORMS,
+        enabledPlatforms: cfg.ENABLED_PLATFORMS,
       }),
       'EX',
-      config.SESSION_TIMEOUT_MINUTES * 60
+      cfg.SESSION_TIMEOUT_MINUTES * 60
     );
 
     // Record metrics
-    sessionsStartedCounter?.add(1);
+    metrics.sessionsStartedCounter?.add(1);
     span?.setAttribute('session.id', sessionId);
 
     console.log(`Session started for ${client.id}, expires at ${expiresAt.toISOString()}`);
@@ -364,7 +402,9 @@ async function startSession(redis, ws, client, processQueue) {
     console.error('Failed to start session:', err);
     span?.recordException(err);
     span?.end();
-    ws.send(formatWsError(ErrorCodes.SESSION_START_FAILED, 'Failed to start demo session'));
+    ws.send(
+      deps.formatWsError(deps.ErrorCodes.SESSION_START_FAILED, 'Failed to start demo session')
+    );
     client.state = 'connected';
 
     // Clean up env file if it was created
@@ -377,8 +417,8 @@ async function startSession(redis, ws, client, processQueue) {
   }
 }
 
-function scheduleSessionWarning(ws, client) {
-  const warningTime = (config.SESSION_TIMEOUT_MINUTES - 5) * 60 * 1000;
+function scheduleSessionWarning(ws, client, cfg = config) {
+  const warningTime = (cfg.SESSION_TIMEOUT_MINUTES - 5) * 60 * 1000;
 
   setTimeout(() => {
     const activeSession = state.getActiveSession();
@@ -393,13 +433,13 @@ function scheduleSessionWarning(ws, client) {
   }, warningTime);
 }
 
-function scheduleSessionTimeout(redis, client, processQueue) {
-  const timeoutMs = config.SESSION_TIMEOUT_MINUTES * 60 * 1000;
+function scheduleSessionTimeout(redis, client, processQueue, deps = createDefaultDeps()) {
+  const timeoutMs = deps.config.SESSION_TIMEOUT_MINUTES * 60 * 1000;
 
   setTimeout(() => {
-    const activeSession = state.getActiveSession();
+    const activeSession = deps.state.getActiveSession();
     if (activeSession && activeSession.clientId === client.id) {
-      endSession(redis, 'timeout', processQueue);
+      endSession(redis, 'timeout', processQueue, deps);
     }
   }, timeoutMs);
 }
@@ -409,12 +449,14 @@ function scheduleSessionTimeout(redis, client, processQueue) {
  * @param {Object} redis - Redis client
  * @param {string} reason - End reason
  * @param {Function} processQueue - Queue processing callback
+ * @param {Object} [deps] - Optional dependencies for testing
  */
-async function endSession(redis, reason, processQueue) {
-  const activeSession = state.getActiveSession();
+async function endSession(redis, reason, processQueue, deps = createDefaultDeps()) {
+  const { config: cfg, state: st, metrics } = deps;
+  const activeSession = st.getActiveSession();
   if (!activeSession) return;
 
-  const tracer = getTracer();
+  const tracer = deps.getTracer();
   const span = tracer?.startSpan('session.end', {
     attributes: {
       'session.id': activeSession.sessionId,
@@ -429,8 +471,8 @@ async function endSession(redis, reason, processQueue) {
   console.log(`Ending session for ${clientId}, reason: ${reason}`);
 
   // Record session duration
-  sessionDurationHistogram?.record(durationMs / 1000, { reason });
-  sessionsEndedCounter?.add(1, { reason });
+  metrics.sessionDurationHistogram?.record(durationMs / 1000, { reason });
+  metrics.sessionsEndedCounter?.add(1, { reason });
   span?.setAttribute('session.duration_seconds', durationMs / 1000);
 
   // Kill ttyd process
@@ -458,11 +500,11 @@ async function endSession(redis, reason, processQueue) {
 
   // Record invite usage if applicable
   if (activeSession.inviteToken) {
-    await recordInviteUsage(redis, activeSession, endedAt, reason, config.AUDIT_RETENTION_DAYS);
+    await deps.recordInviteUsage(redis, activeSession, endedAt, reason, cfg.AUDIT_RETENTION_DAYS);
   }
 
   // Notify client to clear cookie
-  const clientWs = findClientWs(clientId);
+  const clientWs = findClientWs(clientId, st);
   if (clientWs) {
     clientWs.send(
       JSON.stringify({
@@ -472,7 +514,7 @@ async function endSession(redis, reason, processQueue) {
       })
     );
 
-    const client = state.clients.get(clientWs);
+    const client = st.clients.get(clientWs);
     if (client) {
       client.state = 'connected';
       client.sessionToken = null;
@@ -483,9 +525,9 @@ async function endSession(redis, reason, processQueue) {
   await redis.del(`session:${clientId}`);
 
   // Run sandbox cleanup for all configured platforms
-  runSandboxCleanup();
+  runSandboxCleanup(deps);
 
-  state.setActiveSession(null);
+  st.setActiveSession(null);
   span?.end();
 
   // Process next in queue
@@ -493,6 +535,7 @@ async function endSession(redis, reason, processQueue) {
 }
 
 module.exports = {
+  createDefaultDeps,
   generateSessionToken,
   clearSessionToken,
   findClientWs,

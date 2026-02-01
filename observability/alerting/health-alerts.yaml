@@ -304,7 +304,6 @@ groups:
           severity: warning
           service: as-demo
           component: nginx
-
 # =============================================================================
 # Contact Points (configure in Grafana UI or via API)
 # =============================================================================

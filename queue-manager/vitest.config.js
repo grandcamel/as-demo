@@ -19,6 +19,13 @@ export default defineConfig({
       reportsDirectory: 'coverage',
       exclude: ['node_modules/', '__tests__/', 'coverage/', '*.config.js'],
       thresholds: {
+        // Global baseline thresholds
+        // These ensure overall coverage doesn't regress as new code is added
+        lines: 60,
+        functions: 60,
+        branches: 50,
+        statements: 60,
+
         // Per-file thresholds for well-tested utility code (100% coverage)
         'lib/rate-limit.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
         'lib/env-file.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
@@ -59,9 +66,9 @@ export default defineConfig({
         // Error handling module
         'errors/index.js': { lines: 100, functions: 100, branches: 100, statements: 100 },
 
-        // Note: Global thresholds not set due to untested integration files
-        // (instrumentation.js, server.js, lib/index.js, lib/metrics.js, config/index.js)
-        // Add integration tests for these before enabling global thresholds
+        // Note: Integration files (instrumentation.js, server.js, lib/index.js, lib/metrics.js, config/index.js)
+        // are covered by the global baseline threshold. Per-file thresholds can be added
+        // once integration tests are written for these files.
       },
     },
     clearMocks: true,

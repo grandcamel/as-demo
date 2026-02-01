@@ -86,6 +86,108 @@ function register(app, redis) {
       scenarios: scenarios,
     });
   });
+
+  // Configuration diagnostics (detailed status for debugging)
+  app.get('/api/config/diagnostics', (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    const diagnostics = [];
+
+    // Check each valid platform
+    for (const platformId of config.VALID_PLATFORMS) {
+      const isEnabled = config.ENABLED_PLATFORMS.includes(platformId);
+      const platformConfig = config.platforms[platformId];
+      const isConfigured = platformConfig ? platformConfig.isConfigured() : false;
+
+      // Platform enabled but not configured
+      if (isEnabled && !isConfigured) {
+        diagnostics.push({
+          level: 'error',
+          platform: platformId,
+          message: `Platform ${platformId} is enabled but not configured (missing credentials)`,
+          suggestion: `Set the required environment variables for ${platformId}`,
+        });
+      }
+
+      // Platform configured but not enabled
+      if (!isEnabled && isConfigured) {
+        diagnostics.push({
+          level: 'info',
+          platform: platformId,
+          message: `Platform ${platformId} is configured but not enabled`,
+          suggestion: `Add ${platformId} to ENABLED_PLATFORMS to activate it`,
+        });
+      }
+
+      // Platform not configured and not enabled
+      if (!isEnabled && !isConfigured) {
+        diagnostics.push({
+          level: 'info',
+          platform: platformId,
+          message: `Platform ${platformId} is not configured`,
+          suggestion: `Set credentials and add to ENABLED_PLATFORMS to use ${platformId}`,
+        });
+      }
+    }
+
+    // Check for Claude authentication
+    if (!config.CLAUDE_CODE_OAUTH_TOKEN && !config.ANTHROPIC_API_KEY) {
+      diagnostics.push({
+        level: 'warning',
+        component: 'auth',
+        message: 'No Claude authentication configured',
+        suggestion: 'Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY',
+      });
+    }
+
+    // Check session environment path
+    if (!config.SESSION_ENV_HOST_PATH) {
+      diagnostics.push({
+        level: 'warning',
+        component: 'session',
+        message: 'SESSION_ENV_HOST_PATH not configured',
+        suggestion: 'Set SESSION_ENV_HOST_PATH for secure credential passing to containers',
+      });
+    }
+
+    // Check for scenario availability
+    const scenarioCount = Object.keys(config.SCENARIO_NAMES).length;
+    if (scenarioCount === 0) {
+      diagnostics.push({
+        level: 'warning',
+        component: 'scenarios',
+        message: 'No scenarios available',
+        suggestion: 'Enable at least one platform with valid scenarios',
+      });
+    }
+
+    // Build summary
+    const errors = diagnostics.filter((d) => d.level === 'error');
+    const warnings = diagnostics.filter((d) => d.level === 'warning');
+    const infos = diagnostics.filter((d) => d.level === 'info');
+
+    const overallStatus = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok';
+
+    res.json({
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      summary: {
+        errors: errors.length,
+        warnings: warnings.length,
+        info: infos.length,
+      },
+      platforms: {
+        valid: config.VALID_PLATFORMS,
+        enabled: config.ENABLED_PLATFORMS,
+        configured: config.getConfiguredPlatforms(),
+      },
+      scenarios: {
+        count: scenarioCount,
+        byPlatform: config.getScenariosByPlatform(),
+      },
+      diagnostics,
+    });
+  });
 }
 
 module.exports = { register };

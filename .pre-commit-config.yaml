@@ -53,6 +53,17 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
 
+  # JavaScript linting with oxlint (fast Rust-based linter)
+  - repo: local
+    hooks:
+      - id: oxlint
+        name: oxlint
+        entry: npx oxlint
+        language: system
+        files: ^queue-manager/.*\.js$
+        pass_filenames: true
+        require_serial: false
+
 # CI configuration
 ci:
   autofix_prs: true
