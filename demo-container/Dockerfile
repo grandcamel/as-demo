@@ -10,6 +10,12 @@ FROM ${BASE_IMAGE}
 
 USER root
 
+# Update Go to fix CVEs (CVE-2024-24790, CVE-2023-45288, etc.)
+# Base image has Go 1.22.0 with known vulnerabilities
+ARG GO_VERSION=1.24.12
+RUN rm -rf /usr/local/go && \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+
 # Pre-install CLI tools (read-only filesystem prevents runtime pip install)
 RUN pip install --no-cache-dir --break-system-packages \
     confluence-as \
