@@ -78,18 +78,11 @@ RUN chown devuser:node /home/devuser/.claude/settings.json && \
 
 USER devuser
 
-# Pre-install ALL THREE plugins (also installed at runtime for updates)
-# Confluence
-RUN claude plugin marketplace add https://github.com/grandcamel/confluence-assistant-skills.git#main || true && \
-    claude plugin install confluence-assistant-skills@confluence-assistant-skills-marketplace --scope user || true
-
-# JIRA
-RUN claude plugin marketplace add https://github.com/grandcamel/jira-assistant-skills.git#main || true && \
-    claude plugin install jira-assistant-skills@jira-assistant-skills --scope user || true
-
-# Splunk
-RUN claude plugin marketplace add https://github.com/grandcamel/splunk-assistant-skills.git#main || true && \
-    claude plugin install splunk-assistant-skills@splunk-assistant-skills --scope user || true
+# Pre-install plugins from centralized marketplace (grandcamel/as-plugins)
+RUN claude plugin marketplace add https://github.com/grandcamel/as-plugins.git#main || true && \
+    claude plugin install confluence-assistant-skills@as-plugins --scope user || true && \
+    claude plugin install jira-assistant-skills@as-plugins --scope user || true && \
+    claude plugin install splunk-assistant-skills@as-plugins --scope user || true
 
 USER root
 

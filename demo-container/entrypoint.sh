@@ -192,32 +192,48 @@ if [[ "$ENABLED_PLATFORMS" == *"splunk"* ]]; then
 fi
 
 # Display pre-installed plugin versions (installed at image build time)
+# Plugins may be in cache/ (installed) or marketplaces/ (added but not installed)
 echo -e "${CYAN}Installing Claude plugins...${NC}"
 
+get_plugin_version() {
+    local name="$1"
+    # Check cache first (installed plugins from as-plugins marketplace)
+    # Then check marketplaces directory as fallback
+    local version
+    version=$(cat ~/.claude/plugins/cache/as-plugins/${name}/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
+    if [ -z "$version" ] || [ "$version" = "null" ]; then
+        version=$(cat ~/.claude/plugins/cache/*/${name}/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
+    fi
+    if [ -z "$version" ] || [ "$version" = "null" ]; then
+        version=$(cat ~/.claude/plugins/marketplaces/${name}/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version')
+    fi
+    echo "$version"
+}
+
 if [[ "$ENABLED_PLATFORMS" == *"confluence"* ]]; then
-    INSTALLED_VERSION=$(cat ~/.claude/plugins/cache/*/confluence-assistant-skills/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
-    if [ -n "$INSTALLED_VERSION" ]; then
+    INSTALLED_VERSION=$(get_plugin_version "confluence-assistant-skills")
+    if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "null" ]; then
         echo -e "  ${GREEN}✓${NC} Confluence plugin v${INSTALLED_VERSION}"
     else
-        echo -e "  ${YELLOW}⚠${NC} Confluence plugin failed"
+        echo -e "  ${YELLOW}⚠${NC} Confluence plugin not found"
     fi
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"jira"* ]]; then
-    INSTALLED_VERSION=$(cat ~/.claude/plugins/cache/*/jira-assistant-skills/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
-    if [ -n "$INSTALLED_VERSION" ]; then
+    INSTALLED_VERSION=$(get_plugin_version "jira-assistant-skills")
+    if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "null" ]; then
         echo -e "  ${GREEN}✓${NC} JIRA plugin v${INSTALLED_VERSION}"
     else
-        echo -e "  ${YELLOW}⚠${NC} JIRA plugin failed"
+        echo -e "  ${YELLOW}⚠${NC} JIRA plugin not found"
     fi
 fi
 
 if [[ "$ENABLED_PLATFORMS" == *"splunk"* ]]; then
-    INSTALLED_VERSION=$(cat ~/.claude/plugins/cache/*/splunk-assistant-skills/*/.claude-plugin/plugin.json 2>/dev/null | jq -r '.version' | head -1)
-    if [ -n "$INSTALLED_VERSION" ]; then
+    INSTALLED_VERSION=$(get_plugin_version "splunk-assistant-skills")
+    if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "null" ]; then
         echo -e "  ${GREEN}✓${NC} Splunk plugin v${INSTALLED_VERSION}"
     else
-        echo -e "  ${YELLOW}⚠${NC} Splunk plugin failed"
+        echo -e "  ${YELLOW}⚠${NC} Splunk plugin not found"
     fi
 fi
 

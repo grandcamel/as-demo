@@ -13,7 +13,7 @@
 	test-skill-dev refine-skill test-skill-mock list-scenarios \
 	start-local stop-local restart-local status-local health-local \
 	queue-status-local queue-reset-local logs-errors-local traces-errors-local \
-	generate-env generate-env-force
+	generate-env generate-env-force shell
 
 # Default target
 help:
@@ -69,6 +69,7 @@ help:
 	@echo "  make build           Build all containers"
 	@echo "  make build-queue     Build queue manager"
 	@echo "  make build-demo      Build demo container"
+	@echo "  make shell           Interactive shell in demo container"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make lint            Run linters"
@@ -209,6 +210,13 @@ build-queue:
 
 build-demo:
 	docker build -t as-demo-container:latest ./demo-container
+
+# Run interactive shell in demo container (bypass queue/web)
+shell: build-demo
+	docker run -it --rm \
+		--env-file secrets/.env \
+		--network as-demo-network \
+		as-demo-container:latest
 
 # =============================================================================
 # Testing
