@@ -12,7 +12,8 @@
 	deploy deploy-setup deploy-ssl deploy-update ssl-renew health-prod deploy-status \
 	test-skill-dev refine-skill test-skill-mock list-scenarios \
 	start-local stop-local restart-local status-local health-local \
-	queue-status-local queue-reset-local logs-errors-local traces-errors-local
+	queue-status-local queue-reset-local logs-errors-local traces-errors-local \
+	generate-env generate-env-force
 
 # Default target
 help:
@@ -73,6 +74,7 @@ help:
 	@echo "  make lint            Run linters"
 	@echo "  make invite          Generate invite URL"
 	@echo "  make status          Check service status"
+	@echo "  make generate-env    Generate secrets/.env from env vars"
 	@echo "  make env-splunk      Output Splunk env vars (use with eval)"
 	@echo "  make env-splunk-show Show Splunk env vars"
 	@echo "  make clean           Remove containers and volumes"
@@ -375,6 +377,14 @@ env-splunk-show:
 	@echo "  SPLUNK_HEC_TOKEN=demo-hec-token-12345"
 	@echo ""
 	@echo "To set in current shell: eval \$$(make env-splunk)"
+
+# Generate secrets/.env from environment variables
+generate-env:
+	@./scripts/generate-env.sh
+
+# Force regenerate secrets/.env
+generate-env-force:
+	@./scripts/generate-env.sh --force
 
 # Check service status
 status:
