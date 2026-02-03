@@ -371,18 +371,22 @@ lint-fix:
 # Set Splunk environment variables for local as-demo-splunk instance
 # Usage: eval $(make env-splunk)
 env-splunk:
+	@echo "export SPLUNK_SITE_URL=https://localhost"
 	@echo "export SPLUNK_URL=https://localhost:8089"
 	@echo "export SPLUNK_USERNAME=admin"
 	@echo "export SPLUNK_PASSWORD=DemoPass123!"
 	@echo "export SPLUNK_HEC_TOKEN=demo-hec-token-12345"
+	@echo "export SPLUNK_VERIFY_SSL=false"
 
 # Print Splunk env vars (human readable)
 env-splunk-show:
 	@echo "Splunk environment variables for local instance:"
+	@echo "  SPLUNK_SITE_URL=https://localhost"
 	@echo "  SPLUNK_URL=https://localhost:8089"
 	@echo "  SPLUNK_USERNAME=admin"
 	@echo "  SPLUNK_PASSWORD=DemoPass123!"
 	@echo "  SPLUNK_HEC_TOKEN=demo-hec-token-12345"
+	@echo "  SPLUNK_VERIFY_SSL=false"
 	@echo ""
 	@echo "To set in current shell: eval \$$(make env-splunk)"
 
