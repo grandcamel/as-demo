@@ -63,7 +63,9 @@ services:
              touch /var/log/nginx/access.log /var/log/nginx/error.log &&
              nginx -g 'daemon off;'"
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:80/']
+      # Use 127.0.0.1 (not localhost -> ::1, which nginx doesn't listen on) and the
+      # dedicated /healthz location (a plain 200, so no HTTPS-redirect / cert failure).
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://127.0.0.1/healthz']
       <<: *healthcheck-http
     depends_on:
       queue-manager:
