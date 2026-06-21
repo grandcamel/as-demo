@@ -1,9 +1,11 @@
 # Additional location blocks for AS-Demo
 # This file is included by demo.conf
 
-# Health check (public)
+# Health check (public). Uses the $qm variable + resolver from the including
+# server block so a recreated queue-manager is re-resolved (no stale-IP 502).
 location /health {
-    proxy_pass http://queue-manager/api/health;
+    rewrite ^/health$ /api/health break;
+    proxy_pass http://$qm:3000$uri$is_args$args;
 }
 
 # Robots.txt
