@@ -53,11 +53,11 @@ sudo ./scripts/deploy.sh --ssl
 The droplet at `143.110.131.254` serves **two sites from one nginx**, split by hostname
 (see `nginx/ssl.conf`, mounted live as `nginx/production.conf`):
 
-| Host                                              | Served from               | Purpose                                  |
-| ------------------------------------------------- | ------------------------- | ---------------------------------------- |
-| `assistant-skills.dev` / `www` (**default_server**) | `/var/www/html`           | Advisory React site (separate deploy)    |
-| `assistant-skills.dev/demo` and `/demo/`          | —                         | **301 redirect** → `demo.assistant-skills.dev/` |
-| `demo.assistant-skills.dev`                        | `/var/www/html/demo`      | **AS-Demo** landing page + backend proxies |
+| Host                                                | Served from          | Purpose                                         |
+| --------------------------------------------------- | -------------------- | ----------------------------------------------- |
+| `assistant-skills.dev` / `www` (**default_server**) | `/var/www/html`      | Advisory React site (separate deploy)           |
+| `assistant-skills.dev/demo` and `/demo/`            | —                    | **301 redirect** → `demo.assistant-skills.dev/` |
+| `demo.assistant-skills.dev`                         | `/var/www/html/demo` | **AS-Demo** landing page + backend proxies      |
 
 Key points:
 
