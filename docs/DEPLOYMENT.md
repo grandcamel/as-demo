@@ -96,6 +96,13 @@ stopped `lgtm` collector. The `/grafana/` nginx location and `grafana` upstream 
 removed from `ssl.conf` while the stack is off (a dead `lgtm` upstream makes `nginx -t`
 fail); restore both alongside `lgtm` if you re-enable observability.
 
+> **REQUIRED: `NGINX_CONFIG=production.conf` in `secrets/.env`.** The compose nginx mount
+> is `./nginx/${NGINX_CONFIG:-demo.conf}`, defaulting to the HTTP-only **dev** config.
+> Production must select `production.conf` (the SSL / hostname-split config). If unset, a
+> plain `docker compose up -d nginx` recreates nginx with `demo.conf`, whose dead
+> `lgtm:3000` grafana upstream **crash-loops nginx and takes the site down** in
+> minimal-live. Symptom: `nginx: [emerg] host not found in upstream "lgtm:3000"`.
+
 > **Note on cost:** minimal-live frees ~2 GiB RAM but does **not** reduce the bill — the
 > 8 GB droplet is a fixed tier. The actual cost lever is a droplet **resize**
 > (`doctl compute droplet-action power-off/resize/power-on`), which is a separate change.
