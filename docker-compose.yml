@@ -138,10 +138,14 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 
       # Observability
+      # OTEL_SDK_DISABLED toggles all telemetry. In minimal-live the lgtm
+      # collector is stopped (observability profile), so set OTEL_SDK_DISABLED=true
+      # in secrets/.env to avoid OTLP exporter / DNS-resolution error spam.
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-false}
       - OTEL_SERVICE_NAME=as-demo-queue-manager
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4318}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-otlp}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-otlp}
     volumes:
       # SECURITY: Docker socket is required to spawn demo containers.
       # Mitigations: memory/CPU/PID limits, dropped capabilities, no-new-privileges
@@ -156,8 +160,9 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      lgtm:
-        condition: service_healthy
+      # lgtm dependency removed for minimal-live: the LGTM stack is now behind
+      # the "observability" profile and is not started by default. OTEL is
+      # disabled (OTEL_SDK_DISABLED) so the queue-manager runs fine without it.
     restart: unless-stopped
     networks:
       - demo-network
@@ -210,6 +215,9 @@ services:
   lgtm:
     image: grafana/otel-lgtm:latest
     container_name: as-demo-lgtm
+    # minimal-live: LGTM observability stack is opt-in. Start with:
+    #   docker compose --profile observability up -d
+    profiles: ['observability']
     environment:
       - GF_SERVER_ROOT_URL=http://localhost:8080/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
@@ -255,6 +263,7 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter:latest
     container_name: as-demo-redis-exporter
+    profiles: ['observability']
     environment:
       - REDIS_ADDR=redis://redis:6379
     # Note: No healthcheck - scratch container has no shell tools
@@ -270,6 +279,7 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: as-demo-promtail
+    profiles: ['observability']
     volumes:
       - ./observability/promtail-config.yaml:/etc/promtail/config.yml:ro
       - nginx-logs:/var/log/nginx:ro

@@ -48,6 +48,58 @@ sudo ./scripts/deploy.sh --ssl
 ./scripts/deploy.sh
 ```
 
+## Hosting Topology (apex advisory + demo subdomain)
+
+The droplet at `143.110.131.254` serves **two sites from one nginx**, split by hostname
+(see `nginx/ssl.conf`, mounted live as `nginx/production.conf`):
+
+| Host                                              | Served from               | Purpose                                  |
+| ------------------------------------------------- | ------------------------- | ---------------------------------------- |
+| `assistant-skills.dev` / `www` (**default_server**) | `/var/www/html`           | Advisory React site (separate deploy)    |
+| `assistant-skills.dev/demo` and `/demo/`          | —                         | **301 redirect** → `demo.assistant-skills.dev/` |
+| `demo.assistant-skills.dev`                        | `/var/www/html/demo`      | **AS-Demo** landing page + backend proxies |
+
+Key points:
+
+- The AS-Demo landing page lives at the **subdomain root**, so its origin is
+  `https://demo.assistant-skills.dev` — which matches `ALLOWED_ORIGINS`, so the
+  WebSocket (`/api/ws`) connects without any env change. Serving the demo at the
+  apex `/demo/` subpath breaks the WS (origin becomes the apex) — hence the redirect.
+- A single **SAN cert** (`live/demo.assistant-skills.dev`) covers apex + www + demo.
+  The `:80` block answers ACME for **all three** names, so webroot renewal keeps working.
+- `default_server` on the apex means direct-IP / unknown-Host hits land on the advisory
+  site. Caveat: this also masks a future `demo.*` DNS regression (would silently serve
+  advisory instead of erroring).
+- The advisory deploy only writes `index.html` / `assets/` / `demand-intelligence/` into
+  the webroot and never touches `demo/`, so the subdomain root is stable across its deploys.
+
+## Run Modes (minimal-live vs full observability)
+
+The live droplet runs **minimal-live**: only `nginx`, `queue-manager`, `redis`. The LGTM
+stack (`lgtm`, `promtail`, `redis-exporter`) is behind the `observability` compose profile
+and is **off by default**.
+
+```bash
+# Minimal-live (default) — nginx + queue-manager + redis only
+docker compose up -d
+
+# With observability (Grafana/Loki/Tempo + promtail + redis-exporter)
+docker compose --profile observability up -d
+
+# With Splunk
+docker compose --profile full up -d
+```
+
+When observability is off, set `OTEL_SDK_DISABLED=true` in `secrets/.env` so the
+queue-manager doesn't spam OTLP exporter / DNS-resolution errors trying to reach the
+stopped `lgtm` collector. The `/grafana/` nginx location and `grafana` upstream are
+removed from `ssl.conf` while the stack is off (a dead `lgtm` upstream makes `nginx -t`
+fail); restore both alongside `lgtm` if you re-enable observability.
+
+> **Note on cost:** minimal-live frees ~2 GiB RAM but does **not** reduce the bill — the
+> 8 GB droplet is a fixed tier. The actual cost lever is a droplet **resize**
+> (`doctl compute droplet-action power-off/resize/power-on`), which is a separate change.
+
 ## Detailed Steps
 
 ### Step 1: Server Setup
@@ -347,6 +399,9 @@ If queue is full:
 ## Monitoring
 
 ### Grafana Dashboards
+
+> Available only when the `observability` profile is running (see **Run Modes**). In
+> minimal-live the LGTM stack is stopped and the `/grafana/` nginx location is removed.
 
 Access at: `https://demo.assistant-skills.dev/grafana/` (requires active session)
 

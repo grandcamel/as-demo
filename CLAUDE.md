@@ -293,11 +293,18 @@ CONFLUENCE_SKILLS_PATH=/home/user/my-confluence make refine-skill PLATFORM=confl
 
 ## Deployment Modes
 
-| Mode               | Command                               | Services                          |
-| ------------------ | ------------------------------------- | --------------------------------- |
-| Atlassian Only     | `docker compose up -d`                | nginx, queue-manager, redis, lgtm |
-| Full (with Splunk) | `docker compose --profile full up -d` | + splunk, log-generator           |
-| Development        | `make dev`                            | Hot reload, debug logging         |
+| Mode               | Command                                        | Services                                  |
+| ------------------ | ---------------------------------------------- | ----------------------------------------- |
+| Minimal-live (default) | `docker compose up -d`                     | nginx, queue-manager, redis               |
+| + Observability    | `docker compose --profile observability up -d` | + lgtm, promtail, redis-exporter          |
+| Full (with Splunk) | `docker compose --profile full up -d`          | + splunk, log-generator                   |
+| Development        | `make dev`                                     | Hot reload, debug logging                 |
+
+> **Topology:** production runs two sites from one nginx — the advisory site at the apex
+> (`assistant-skills.dev`, `default_server`) and AS-Demo at `demo.assistant-skills.dev`.
+> `/demo/` on the apex 301-redirects to the subdomain. Serving the demo at the subdomain
+> root keeps its origin matching `ALLOWED_ORIGINS` so the WebSocket connects. See
+> `docs/DEPLOYMENT.md` → "Hosting Topology" and "Run Modes".
 
 ## Multi-Platform Configuration
 
