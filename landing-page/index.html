@@ -11,9 +11,7 @@
       <header>
         <h1>AS-Demo</h1>
         <p class="subtitle">Combined Assistant Skills Demo Platform</p>
-        <p class="description">
-          Experience AI-powered automation across Confluence, JIRA, and Splunk
-        </p>
+        <p class="description">Experience AI-powered automation across Confluence and JIRA</p>
       </header>
 
       <main>
@@ -37,22 +35,11 @@
 
           <div class="platform-group">
             <h3 class="platform-header cross-platform">Cross-Platform Workflows</h3>
+            <!-- Splunk-dependent cross-platform scenarios (incident-response, sre-oncall,
+                 change-management) trimmed to match ENABLED_PLATFORMS=confluence,jira — they
+                 return "Scenario not found" while Splunk is disabled. Restore here if Splunk
+                 is re-enabled. -->
             <div class="scenario-grid" id="cross-platform-scenarios">
-              <a href="/scenarios/incident-response" class="scenario-card">
-                <span class="icon">🚨</span>
-                <span class="title">Incident Response</span>
-                <span class="desc">Splunk alerts → Confluence runbook → JIRA ticket</span>
-              </a>
-              <a href="/scenarios/sre-oncall" class="scenario-card">
-                <span class="icon">📟</span>
-                <span class="title">SRE On-Call</span>
-                <span class="desc">Alert triage with KB and task creation</span>
-              </a>
-              <a href="/scenarios/change-management" class="scenario-card">
-                <span class="icon">📋</span>
-                <span class="title">Change Management</span>
-                <span class="desc">JIRA change → Confluence docs → Splunk monitoring</span>
-              </a>
               <a href="/scenarios/knowledge-sync" class="scenario-card">
                 <span class="icon">📚</span>
                 <span class="title">Knowledge Sync</span>
@@ -113,31 +100,9 @@
             </div>
           </div>
 
-          <div class="platform-group">
-            <h3 class="platform-header splunk">Splunk</h3>
-            <div class="scenario-grid" id="splunk-scenarios">
-              <a href="/scenarios/devops" class="scenario-card">
-                <span class="icon">🔧</span>
-                <span class="title">DevOps Engineer</span>
-                <span class="desc">Deployment monitoring, CI/CD</span>
-              </a>
-              <a href="/scenarios/sre" class="scenario-card">
-                <span class="icon">🚨</span>
-                <span class="title">SRE / On-Call</span>
-                <span class="desc">Alert management, incidents</span>
-              </a>
-              <a href="/scenarios/support" class="scenario-card">
-                <span class="icon">🎧</span>
-                <span class="title">Support Engineer</span>
-                <span class="desc">Log analysis, troubleshooting</span>
-              </a>
-              <a href="/scenarios/splunk-search" class="scenario-card">
-                <span class="icon">🔍</span>
-                <span class="title">Search Basics</span>
-                <span class="desc">SPL queries and visualizations</span>
-              </a>
-            </div>
-          </div>
+          <!-- Splunk platform group (devops, sre, support, splunk-search) trimmed to match
+               ENABLED_PLATFORMS=confluence,jira — these return "Scenario not found" while
+               Splunk is disabled. Restore this group if Splunk is re-enabled. -->
         </section>
 
         <section class="cta-section">
