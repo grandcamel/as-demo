@@ -293,12 +293,12 @@ CONFLUENCE_SKILLS_PATH=/home/user/my-confluence make refine-skill PLATFORM=confl
 
 ## Deployment Modes
 
-| Mode               | Command                                        | Services                                  |
-| ------------------ | ---------------------------------------------- | ----------------------------------------- |
-| Minimal-live (default) | `docker compose up -d`                     | nginx, queue-manager, redis               |
-| + Observability    | `docker compose --profile observability up -d` | + lgtm, promtail, redis-exporter          |
-| Full (with Splunk) | `docker compose --profile full up -d`          | + splunk, log-generator                   |
-| Development        | `make dev`                                     | Hot reload, debug logging                 |
+| Mode                   | Command                                        | Services                         |
+| ---------------------- | ---------------------------------------------- | -------------------------------- |
+| Minimal-live (default) | `docker compose up -d`                         | nginx, queue-manager, redis      |
+| + Observability        | `docker compose --profile observability up -d` | + lgtm, promtail, redis-exporter |
+| Full (with Splunk)     | `docker compose --profile full up -d`          | + splunk, log-generator          |
+| Development            | `make dev`                                     | Hot reload, debug logging        |
 
 > **Topology:** production runs two sites from one nginx — the advisory site at the apex
 > (`assistant-skills.dev`, `default_server`) and AS-Demo at `demo.assistant-skills.dev`.
